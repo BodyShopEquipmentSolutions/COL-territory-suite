@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Service Request – Car-O-Liner Southwest</title>
+<style>
+:root{--brand:#0B61A4;--ink:#f7fafc;--panel:rgba(255,255,255,.06);--stroke:rgba(255,255,255,.14);}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--brand);color:var(--ink);font-family:ui-rounded,system-ui,-apple-system,Segoe UI,Inter,Roboto,sans-serif}
+.container{max-width:1100px;margin:0 auto;padding:16px}
+.card{background:var(--panel);border:1px solid var(--stroke);border-radius:24px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.hbar{display:flex;gap:12px;align-items:center;margin-bottom:10px;padding:10px 14px}
+.logo{height:38px}
+.btn{background:#111827;border:1px solid var(--stroke);color:var(--ink);border-radius:12px;padding:10px 14px;cursor:pointer}
+input,select,textarea{width:100%;padding:12px;border-radius:14px;border:1px solid var(--stroke);background:rgba(0,0,0,.25);color:var(--ink)}
+label{display:block;margin:6px 0 6px 2px;font-size:13px;opacity:.9}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:860px){ .row{grid-template-columns:1fr} }
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px;border-bottom:1px solid var(--stroke);text-align:left;vertical-align:top;font-size:14px}
+.table-wrap{max-height:360px;overflow:auto;border-radius:14px}
+#parts thead th{position:sticky;top:0;background:rgba(0,0,0,.35);backdrop-filter:blur(10px);z-index:1}
+
+/* white suggestion dropdowns */
+.suggest{position:absolute;left:0;right:0;top:70px;display:none;max-height:260px;overflow:auto;padding:6px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#111;z-index:2000}
+.suggest .opt{display:block;margin:0;padding:10px;border-radius:6px;background:#fff;border-bottom:1px solid #eee;cursor:pointer;font-size:14px}
+.suggest .opt:hover{background:#f3f4f6}
+
+/* status line */
+#status{margin-top:8px;font-size:12px;opacity:.9}
+.good{color:#b8f7b8}
+.bad{color:#ffe08a}
+
+/* ---------- PRINT (PDF) STYLES ---------- */
+@media print{
+  @page{ size: Letter; margin: 0.5in }
+  body{ background:#fff; color:#000; }
+  .no-print{ display:none !important; }
+  #pdfDoc{ display:block !important; }
+}
+#pdfDoc{ display:none; color:#000; font-family:"Segoe UI", Inter, Arial, sans-serif; }
+.pdf-wrap{ width:7.5in; margin:0 auto; }
+.pdf-head{ display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #000; padding-bottom:8px; margin-bottom:10px }
+.pdf-title{ font-size:28px; font-weight:700; letter-spacing:.5px }
+.pdf-meta{ text-align:right; font-size:12px }
+.pdf-meta div{ margin:2px 0 }
+.pdf-two{ display:flex; gap:24px; margin:12px 0 16px }
+.pdf-block{ flex:1; border:1px solid #000; padding:8px }
+.pdf-block h4{ margin:0 0 6px; font-size:12px; font-weight:700; letter-spacing:.3px }
+.pdf-line{ font-size:12px; line-height:1.35 }
+.pdf-table{ width:100%; border-collapse:collapse; font-size:12px; margin-top:6px }
+.pdf-table th,.pdf-table td{ border-bottom:1px solid #000; padding:6px 5px; vertical-align:top }
+.pdf-table th{ text-align:left; }
+.pdf-table .num{ text-align:right; white-space:nowrap }
+.pdf-subrow{ text-align:right; font-weight:600 }
+.pdf-totals{ width:60%; margin-left:auto; font-size:12px; margin-top:10px }
+.pdf-totals td{ padding:4px 5px }
+.pdf-sign{ display:flex; justify-content:space-between; margin-top:18px; font-size:12px }
+.pdf-foot{ margin-top:10px; font-size:11px; opacity:.85 }
+</style>
+</head>
+<body>
+<div class="container no-print">
+  <div class="card hbar">
+    <img class="logo" src="assets/logo.png" alt="" onerror="this.style.display='none'">
+    <h1 style="margin:0">Service Request</h1>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <a class="btn" href="index.html">Home</a>
+      <a class="btn" href="map.html">Map</a>
+    </div>
+  </div>
+
+  <!-- Customer block -->
+  <div class="card" style="padding:16px">
+    <div class="row">
+      <div style="position:relative">
+        <label>Company *</label>
+        <input id="customer" placeholder="Start typing a company…" autocomplete="off">
+        <div id="suggestCompany" class="suggest card"></div>
+      </div>
+      <div><label>Contact Person *</label><input id="contact" placeholder="First Last"></div>
+      <div><label>Phone</label><input id="phone"></div>
+      <div><label>Email</label><input id="email"></div>
+      <div><label>Address</label><input id="address"></div>
+      <div><label>City</label><input id="city"></div>
+      <div><label>State</label><input id="state"></div>
+      <div><label>ZIP</label><input id="zip"></div>
+      <div><label>Rep (who’s writing)</label><input id="rep"></div>
+      <div><label>Region</label><input id="region" value="Car-O-Liner Southwest"></div>
+      <div><label>Date</label><input id="date" type="date"></div>
+      <div><label>Overall Notes</label><input id="overallNotes" placeholder="General notes for this request"></div>
+    </div>
+    <div id="status">Loading…</div>
+  </div>
+
+  <!-- Parts lookup + cart -->
+  <div class="card" style="padding:16px;margin-top:16px">
+    <h2 style="margin:0 0 8px">Equipment / Parts Lookup</h2>
+    <div class="row">
+      <div style="position:relative">
+        <label>Item Number</label>
+        <input id="itemSearch" placeholder="Enter Item Number…" autocomplete="off">
+        <div id="suggestItem" class="suggest card"></div>
+      </div>
+      <div><label>Results</label><input id="resCount" readonly></div>
+    </div>
+
+    <div class="table-wrap card" style="margin-top:10px;padding:0">
+      <table id="parts">
+        <thead><tr><th>Item Number</th><th>Item Description</th><th>List price</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="card" style="padding:0;margin-top:12px">
+      <h3 style="padding:10px;margin:0">Selected Items</h3>
+      <table id="cart">
+        <thead>
+          <tr>
+            <th>Item #</th><th>Description</th><th>Price</th><th>Qty</th>
+            <th>Type</th><th>Notes</th><th>Repair/Replace</th><th>Line Total</th><th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <div style="display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px;flex-wrap:wrap">
+        <div class="row" style="gap:12px;flex:1">
+          <div><label>Sales Tax %</label><input id="taxPct" type="number" min="0" step="0.01" value="0"></div>
+          <div><label>Freight ($)</label><input id="freight" type="number" min="0" step="0.01" value="0"></div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn" id="exportPdf">Export PDF</button>
+        </div>
+      </div>
+
+      <div class="row" style="padding:10px">
+        <div>Subtotal: <strong id="subtotal">$0.00</strong></div>
+        <div>Tax: <strong id="taxAmt">$0.00</strong></div>
+        <div>Freight: <strong id="freightAmt">$0.00</strong></div>
+        <div>Total: <strong id="grand">$0.00</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Send To -->
+  <div class="card" style="padding:16px;margin-top:16px">
+    <h2 style="margin-top:0">Send To</h2>
+    <label><input type="radio" name="to" value="service@Car-O-Linersw.com" checked> service@Car-O-Linersw.com</label>
+    <label><input type="radio" name="to" value="Cguel@Car-O-Linersw.com"> Cguel@Car-O-Linersw.com</label>
+    <label><input type="radio" name="to" value="Systemorders@Car-O-Linersw.com"> Systemorders@Car-O-Linersw.com</label>
+    <label><input type="radio" name="to" value="Bodyshop.e.s@gmail.com"> Bodyshop.e.s@gmail.com</label>
+  </div>
+</div>
+
+<!-- ---------- PRINT DOCUMENT (hidden on screen) ---------- -->
+<div id="pdfDoc">
+  <div class="pdf-wrap">
+    <div class="pdf-head">
+      <div class="pdf-title">QUOTE</div>
+      <div class="pdf-meta">
+        <div><strong>QUOTE #:</strong> <span id="qNo">—</span></div>
+        <div><strong>DATE:</strong> <span id="qDate">—</span></div>
+        <div><strong>T:</strong> (972)-412-5147</div>
+        <div><strong>2805 Singleton St.</strong></div>
+        <div>Rowlett, Texas 75088</div>
+        <div><strong>F:</strong> (972)-412-5287</div>
+      </div>
+    </div>
+
+    <div class="pdf-two">
+      <div class="pdf-block">
+        <h4>Sold To:</h4>
+        <div class="pdf-line" id="soldToName"></div>
+        <div class="pdf-line" id="soldToAddr1"></div>
+        <div class="pdf-line" id="soldToAddr2"></div>
+        <div class="pdf-line" id="soldToCountry">United States of America</div>
+      </div>
+      <div class="pdf-block">
+        <h4>Ship To:</h4>
+        <div class="pdf-line" id="shipToName"></div>
+        <div class="pdf-line" id="shipToAddr1"></div>
+        <div class="pdf-line" id="shipToAddr2"></div>
+        <div class="pdf-line" id="shipToCountry">United States of America</div>
+      </div>
+    </div>
+
+    <table class="pdf-table" id="pdfItems">
+      <thead>
+        <tr>
+          <th style="width:40px">Line</th>
+          <th style="width:40px">Qty</th>
+          <th>Description</th>
+          <th style="width:140px">Part Number</th>
+          <th class="num" style="width:90px">Unit Price</th>
+          <th class="num" style="width:95px">Ext. Price</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <table class="pdf-totals" id="pdfTotals">
+      <tbody>
+        <tr><td class="pdf-subrow" colspan="2">SubTotal</td><td class="num" id="pSub">$0.00</td></tr>
+        <tr><td class="pdf-subrow" colspan="2">Shipping</td><td class="num" id="pShip">$0.00</td></tr>
+        <tr><td class="pdf-subrow" colspan="2">Tax</td><td class="num" id="pTax">$0.00</td></tr>
+        <tr><td class="pdf-subrow" colspan="2"><strong>TOTAL</strong></td><td class="num" id="pTotal"><strong>$0.00</strong></td></tr>
+      </tbody>
+    </table>
+
+    <div class="pdf-sign">
+      <div>
+        <div>Signature ________________________________</div>
+        <div style="margin-top:8px">Date ______________________</div>
+      </div>
+      <div style="text-align:right">
+        <div>Prepared By: <span id="pBy">—</span></div>
+        <div>Car-O-Liner Southwest</div>
+      </div>
+    </div>
+
+    <div class="pdf-foot">
+      Please contact me if I can be of further assistance. 3.80% convenience fee applied if using credit card.
+    </div>
+  </div>
+</div>
+
+<script>
+/* ------------------- helpers ------------------- */
+const $=s=>document.querySelector(s);
+const statusEl=$('#status');
+function setStatus(msg, ok=true){ statusEl.textContent=msg; statusEl.className = ok? 'good':'bad'; }
+function fmtUSD(n){return (+n||0).toLocaleString(undefined,{style:'currency',currency:'USD'});}
+function moneyToNumber(s){const n=parseFloat(String(s).replace(/[^0-9.\-]/g,''));return isFinite(n)?n:0;}
+function selectedSendTo(){const el=document.querySelector('input[name="to"]:checked');return el?el.value:'';}
+
+/* CSV parsing with auto delimiter */
+function csvToRows(text){
+  text = text.replace(/^\uFEFF/,'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  const head=text.slice(0,2000), counts={',':(head.match(/,/g)||[]).length,'\t':(head.match(/\t/g)||[]).length,';':(head.match(/;/g)||[]).length};
+  let d=','; if(counts['\t']>counts[d]) d='\t'; if(counts[';']>counts[d]) d=';';
+  const rows=[]; let field='',row=[],inQ=false;
+  for(let i=0;i<=text.length;i++){const c=text[i]??'\n';
+    if(inQ){ if(c=='"'){ if(text[i+1]=='"'){field+='"';i++;} else inQ=false; } else field+=c; }
+    else { if(c=='"') inQ=true; else if(c==d){row.push(field);field='';} else if(c=='\n'){row.push(field);field=''; if(row.length>1||row[0]!=='') rows.push(row); row=[];} else field+=c; }
+  } return rows;
+}
+function csvToObjects(text){const rows=csvToRows(text);if(!rows.length)return[];const headers=rows.shift().map(h=>h.trim());return rows.map(r=>{const o={};headers.forEach((h,i)=>o[h]=(r[i]??'').trim());return o;});}
+
+/* ------------------- data load ------------------- */
+let CONTACTS=[], PRICE=[];
+async function loadContacts(){
+  try{CONTACTS=await fetch('data/contacts.json',{cache:'no-store'}).then(r=>r.json());}
+  catch{CONTACTS=[];}
+}
+async function tryCsv(path){
+  try{
+    const raw=await fetch(path,{cache:'no-store'}).then(r=>r.ok?r.text():Promise.reject());
+    const rows=csvToObjects(raw);
+    const get=(obj,names)=>{for(const n of names){if(obj[n]!=null&&obj[n]!=='') return obj[n];}return'';}
+    const mapped=rows.map(r=>({
+      num:String(get(r,['Item Number','ItemNumber','item_number','Number','Item'])).trim(),
+      desc:String(get(r,['Item Description','ItemDescription','Description','DESC'])).trim(),
+      price:String(get(r,['List price','List Price','Price','List','ListPrice'])).trim()
+    })).filter(x=>x.num);
+    return mapped;
+  }catch{return null;}
+}
+async function loadPrice(){
+  PRICE = await tryCsv('data/2025-COL_Distributor_ListPrice_06302025.csv')
+       || await tryCsv('data/price_list.csv') || [];
+  setStatus(PRICE.length?`Loaded ${PRICE.length} parts`:'No parts loaded', !!PRICE.length);
+}
+
+/* ------------------- company autocomplete ------------------- */
+const suggestCompany=$('#suggestCompany');
+function applyContact(s){
+  $('#customer').value=s.company||s.Company||'';
+  $('#address').value=s.address||s.Address1||'';
+  $('#city').value=s.city||s.City||'';
+  $('#state').value=s.state||s.State||'';
+  $('#zip').value=s.zip||s['Postal Code']||'';
+  $('#phone').value=s.phone||s.Phone||'';
+  $('#email').value=s.email||s.Email||'';
+  const contact=[s.first||s['First Name']||'',s.last||s['Last Name']||''].filter(Boolean).join(' ').trim();
+  $('#contact').value=contact;
+}
+$('#customer').addEventListener('input',()=>{
+  const q=$('#customer').value.toLowerCase().trim(); if(!q){suggestCompany.style.display='none';return;}
+  const res=CONTACTS.filter(s=>(s.company||s.Company||'').toLowerCase().includes(q)).slice(0,200);
+  suggestCompany.innerHTML='';
+  res.forEach(s=>{
+    const div=document.createElement('div'); div.className='opt';
+    div.textContent=(s.company||s.Company||'')+(s.City||s.city?` — ${(s.City||s.city)}, ${(s.State||s.state||'')}`:'');
+    div.addEventListener('click',()=>{applyContact(s);suggestCompany.style.display='none';});
+    suggestCompany.appendChild(div);
+  });
+  suggestCompany.style.display=res.length?'block':'none';
+});
+document.addEventListener('click',e=>{if(!suggestCompany.contains(e.target)&&e.target!==$('#customer'))suggestCompany.style.display='none';});
+
+/* ------------------- item search ------------------- */
+const partsTbody=$('#parts tbody'), partInput=$('#itemSearch'), resCount=$('#resCount'), suggestItem=$('#suggestItem');
+function searchParts(q){
+  q=(q||'').trim().toLowerCase(); if(!q) return [];
+  const exact=PRICE.filter(r=>(r.num||'').toLowerCase()===q);
+  const starts=PRICE.filter(r=>(r.num||'').toLowerCase().startsWith(q));
+  const others=PRICE.filter(r=>(r.num||'').toLowerCase().includes(q) || (r.desc||'').toLowerCase().includes(q));
+  const seen=new Set(); return [...exact,...starts,...others].filter(r=>{const k=(r.num||'')+'|'+(r.desc||'');if(seen.has(k))return false;seen.add(k);return true;});
+}
+function renderParts(rows){
+  partsTbody.innerHTML='';
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${r.num}</td><td>${r.desc}</td><td>${r.price}</td><td><button class="btn">Add</button></td>`;
+    tr.querySelector('button').addEventListener('click',()=>addToCart(r));
+    partsTbody.appendChild(tr);
+  });
+}
+let partTimer;
+function runSearch(){
+  const res=searchParts(partInput.value);
+  renderParts(res); resCount.value=res.length;
+  suggestItem.innerHTML='';
+  res.slice(0,10).forEach(r=>{
+    const div=document.createElement('div'); div.className='opt';
+    div.textContent=`${r.num} — ${r.desc} (${r.price})`;
+    div.addEventListener('click',()=>{addToCart(r);suggestItem.style.display='none';});
+    suggestItem.appendChild(div);
+  });
+  suggestItem.style.display=res.length?'block':'none';
+}
+partInput.addEventListener('input',()=>{clearTimeout(partTimer);partTimer=setTimeout(runSearch,150);});
+partInput.addEventListener('focus',()=>{if(partInput.value)runSearch();});
+document.addEventListener('click',e=>{if(!suggestItem.contains(e.target)&&e.target!==partInput)suggestItem.style.display='none';});
+
+/* ------------------- cart & totals ------------------- */
+const cartBody=$('#cart tbody'), subtotalEl=$('#subtotal'), taxPctEl=$('#taxPct'), taxAmtEl=$('#taxAmt');
+const freightEl=$('#freight'), freightAmtEl=$('#freightAmt'), grandEl=$('#grand');
+const cart=[];
+function addToCart(r){cart.push({num:r.num,desc:r.desc,base:moneyToNumber(r.price),qty:1,type:'',notes:'',rr:'Replace'});renderCart();}
+function lineUnit(it){ return it.rr==='Repair' ? 0 : it.base; }  // Repair = $0
+function lineTotal(it){ return lineUnit(it) * it.qty; }
+function renderCart(){
+  cartBody.innerHTML=''; let sum=0;
+  cart.forEach((it,idx)=>{
+    const unit=lineUnit(it); const line=lineTotal(it); sum+=line;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>${it.num}</td><td>${it.desc}</td><td>${fmtUSD(unit)}</td>
+      <td><input type="number" min="1" value="${it.qty}" style="width:80px"></td>
+      <td><input placeholder="Type" value="${it.type}"></td>
+      <td><input placeholder="Notes" value="${it.notes}"></td>
+      <td><select>
+            <option value="Repair" ${it.rr==='Repair'?'selected':''}>Repair</option>
+            <option value="Replace" ${it.rr==='Replace'?'selected':''}>Replace</option>
+          </select></td>
+      <td>${fmtUSD(line)}</td>
+      <td><button class="btn">Remove</button></td>`;
+    const qtyI=tr.children[3].querySelector('input'),
+          typeI=tr.children[4].querySelector('input'),
+          notesI=tr.children[5].querySelector('input'),
+          rrSel=tr.children[6].querySelector('select');
+    qtyI.addEventListener('change',()=>{it.qty=Math.max(1,parseInt(qtyI.value||'1'));renderCart();});
+    typeI.addEventListener('input',()=>it.type=typeI.value);
+    notesI.addEventListener('input',()=>it.notes=notesI.value);
+    rrSel.addEventListener('change',()=>{it.rr=rrSel.value;renderCart();});
+    tr.children[8].querySelector('button').addEventListener('click',()=>{cart.splice(idx,1);renderCart();});
+    cartBody.appendChild(tr);
+  });
+  const taxPct=parseFloat(taxPctEl.value||'0')/100; const freight=parseFloat(freightEl.value||'0');
+  const tax=sum*(isFinite(taxPct)?taxPct:0); const grand=sum+(isFinite(tax)?tax:0)+(isFinite(freight)?freight:0);
+  subtotalEl.textContent=fmtUSD(sum); taxAmtEl.textContent=fmtUSD(isFinite(tax)?tax:0);
+  freightAmtEl.textContent=fmtUSD(isFinite(freight)?freight:0); grandEl.textContent=fmtUSD(grand);
+}
+taxPctEl.addEventListener('input',renderCart); freightEl.addEventListener('input',renderCart);
+
+/* ------------------- PDF export ------------------- */
+function fillPdfDoc(){
+  const today = ($('#date').value || new Date().toISOString().slice(0,10));
+  $('#qDate').textContent = today;
+  $('#qNo').textContent = '—';
+  $('#pBy').textContent = $('#rep').value || '';
+
+  const name = $('#customer').value || '';
+  const addr1 = $('#address').value || '';
+  const city = $('#city').value || '';
+  const state = $('#state').value || '';
+  const zip = $('#zip').value || '';
+  const addr2 = [city,state,zip].filter(Boolean).join(', ').replace(', ,',',');
+
+  $('#soldToName').textContent = name;
+  $('#soldToAddr1').textContent = addr1;
+  $('#soldToAddr2').textContent = addr2;
+  $('#shipToName').textContent = name;
+  $('#shipToAddr1').textContent = addr1;
+  $('#shipToAddr2').textContent = addr2;
+
+  const tbody = $('#pdfItems tbody'); tbody.innerHTML='';
+  cart.forEach((it,i)=>{
+    const unit=lineUnit(it), line=lineTotal(it);
+    const tr=document.createElement('tr');
+    tr.innerHTML = `
+      <td>${i+1}</td>
+      <td>${it.qty}</td>
+      <td>${it.desc}${it.type?` — ${it.type}`:''}${it.notes?` — ${it.notes}`:''}${it.rr==='Repair'?' (REPAIR)':''}</td>
+      <td>${it.num}</td>
+      <td class="num">${fmtUSD(unit)}</td>
+      <td class="num">${fmtUSD(line)}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  const subtotal = cart.reduce((a,b)=>a+lineTotal(b),0);
+  const ship = parseFloat($('#freight').value||'0')||0;
+  const tax  = subtotal*(parseFloat($('#taxPct').value||'0')/100||0);
+  const total = subtotal + tax + ship;
+  $('#pSub').textContent = fmtUSD(subtotal);
+  $('#pShip').textContent = fmtUSD(ship);
+  $('#pTax').textContent  = fmtUSD(tax);
+  $('#pTotal').textContent= fmtUSD(total);
+}
+function exportPdf(){
+  if(!cart.length){ alert('Please add at least one line item.'); return; }
+  fillPdfDoc();
+  window.print(); // Save as PDF
+}
+document.querySelector('#exportPdf').addEventListener('click', exportPdf);
+// If user prints via browser menu, still populate
+window.onbeforeprint = fillPdfDoc;
+
+/* ------------------- boot ------------------- */
+(async()=>{
+  $('#date').value = new Date().toISOString().slice(0,10);
+  await loadContacts();
+  // price list: 2025…csv then price_list.csv fallback
+  PRICE = await tryCsv('data/2025-COL_Distributor_ListPrice_06302025.csv')
+       || await tryCsv('data/price_list.csv') || [];
+  setStatus(PRICE.length?`Loaded ${PRICE.length} parts · ${CONTACTS.length} contacts`:'Price list not found — check /data filename', !!PRICE.length);
+
+  // Hook up parts search
+  const runSearch=()=>{
+    const q=$('#itemSearch').value;
+    const exact=PRICE.filter(r=>(r.num||'').toLowerCase()===q.toLowerCase());
+    const starts=PRICE.filter(r=>(r.num||'').toLowerCase().startsWith(q.toLowerCase()));
+    const others=PRICE.filter(r=>(r.num||'').toLowerCase().includes(q.toLowerCase())||(r.desc||'').toLowerCase().includes(q.toLowerCase()));
+    const seen=new Set(); const res=[...exact,...starts,...others].filter(r=>{const k=(r.num||'')+'|'+(r.desc||''); if(seen.has(k))return false; seen.add(k); return true;});
+    const tbody=$('#parts tbody'); tbody.innerHTML=''; $('#resCount').value=res.length;
+    const suggest=$('#suggestItem'); suggest.innerHTML='';
+    res.forEach((r,i)=>{
+      if(i<10){ const d=document.createElement('div'); d.className='opt'; d.textContent=`${r.num} — ${r.desc} (${r.price})`; d.onclick=()=>{addToCart(r);suggest.style.display='none';}; suggest.appendChild(d); }
+      const tr=document.createElement('tr'); tr.innerHTML=`<td>${r.num}</td><td>${r.desc}</td><td>${r.price}</td><td><button class="btn">Add</button></td>`;
+      tr.querySelector('button').onclick=()=>addToCart(r); tbody.appendChild(tr);
+    });
+    suggest.style.display=res.length?'block':'none';
+  };
+  let t; $('#itemSearch').addEventListener('input',()=>{clearTimeout(t); t=setTimeout(runSearch,150);});
+  $('#itemSearch').addEventListener('focus',()=>{ if($('#itemSearch').value) runSearch(); });
+  document.addEventListener('click',e=>{ if(!$('#suggestItem').contains(e.target)&&e.target!==$('#itemSearch')) $('#suggestItem').style.display='none'; });
+})();
+</script>
+</body>
+</html>

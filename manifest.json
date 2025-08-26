@@ -1,0 +1,20 @@
+{
+  "name": "Car\u2011O\u2011Liner Southwest",
+  "short_name": "COL SW",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0B61A4",
+  "theme_color": "#0B61A4",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Map – Car-O-Liner Southwest</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+/* Fill the viewport reliably */
+html,body{height:100%;margin:0}
+body{font-family: ui-rounded, system-ui, -apple-system, "Segoe UI", Inter, Roboto, sans-serif; letter-spacing:.1px}
+#map{position:fixed; inset:0;}
+
+/* Toolbar */
+.toolbar{
+  position:fixed; top:10px; left:10px; z-index:1000;
+  padding:8px 10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+  max-width:min(92vw,1200px)
+}
+.btn{background:#111827;border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:12px;padding:8px 12px;cursor:pointer}
+.card{
+  background:rgba(17,24,39,.9);border-radius:12px;border:1px solid rgba(255,255,255,.15);color:#e5e7eb;
+  box-shadow:0 8px 24px rgba(0,0,0,.25)
+}
+select,input[type=checkbox]{margin-left:4px;border-radius:10px}
+
+/* Legend */
+.legend{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 8px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(17,24,39,.85)}
+.legend .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.15);border-radius:999px;padding:2px 8px;font-size:12px}
+.legend .dot{width:12px;height:12px;border-radius:999px;display:inline-block}
+
+/* Status box bottom-right */
+#dbg{
+  position:fixed; right:14px; bottom:14px; z-index:1200;
+  padding:10px 12px; border-radius:12px; background:rgba(17,24,39,.9);
+  border:1px solid rgba(255,255,255,.15); color:#e5e7eb;
+  font:12px/1.35 ui-rounded, system-ui, -apple-system, "Segoe UI", Inter, Roboto, sans-serif
+}
+
+/* Tiny toast (tile fallback info) */
+#toast{
+  position:fixed; left:50%; bottom:20px; transform:translateX(-50%);
+  background:rgba(17,24,39,.92); color:#e5e7eb; padding:8px 12px; border-radius:10px;
+  border:1px solid rgba(255,255,255,.15); z-index:1300; font-size:12px; display:none;
+}
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div class="card toolbar">
+  <button class="btn" id="btnLocate">My Location</button>
+  <label>Rep:
+    <select id="repSel"><option value="">All Territories</option></select>
+  </label>
+  <label><input type="checkbox" id="chkAll" checked> Show all shops</label>
+  <a href="index.html" class="btn">Home</a>
+  <a href="service.html" class="btn">Service</a>
+  <div class="legend" id="legend"></div>
+</div>
+
+<div id="dbg" style="display:none">…</div>
+<div id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ---------- tiny utils ----------
+const $ = sel => document.querySelector(sel);
+function showDebug(text){ const b=$('#dbg'); b.style.display='block'; b.textContent=text; }
+function toast(msg, ms=2200){ const t=$('#toast'); t.textContent=msg; t.style.display='block'; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display='none', ms); }
+
+// CSV parsing (quoted fields)
+function csvToRows(text){const rows=[];let i=0,field='',row=[],inQ=false;while(i<=text.length){const c=text[i]||'\n';if(inQ){if(c=='"'){if(text[i+1]=='"'){field+='"';i++;}else inQ=false;}else field+=c;}else{if(c=='"')inQ=true;else if(c==','||c=='\r'){row.push(field);field='';}else if(c=='\n'){row.push(field);field='';if(row.length>1||row[0]!=='')rows.push(row);row=[];}else field+=c;}i++;}return rows;}
+function csvToObjects(text){const rows=csvToRows(text);if(!rows.length)return[];const headers=rows.shift().map(h=>h.trim());return rows.map(r=>{const o={};headers.forEach((h,i)=>o[h]=(r[i]??'').trim());return o;});}
+
+// normalize any zip-ish value to a 5-digit string
+function normZip(v){
+  if (v == null) return '';
+  let s = String(v).trim();
+  s = (s.match(/\d+/g) || [''])[0];
+  if (!s) return '';
+  if (s.length > 5) s = s.slice(-5);
+  return s.padStart(5,'0');
+}
+
+// ---------- map init ----------
+const map = L.map('map',{ zoomControl:true, minZoom:3 });
+
+// Dedicated panes so shops always sit above polygons
+map.createPane('polys');  map.getPane('polys').style.zIndex = 300;   // underlay
+map.createPane('shops');  map.getPane('shops').style.zIndex = 450;   // overlay
+
+// Tiles with automatic fallback
+let tileLayer;
+const tileProviders = [
+  { name:'OSM',    url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' },
+  { name:'OSM.de', url:'https://tile.openstreetmap.de/{z}/{x}/{y}.png' },
+  { name:'Esri',   url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}' }
+];
+let providerIndex = 0, errorCount = 0;
+function useTiles(idx){
+  providerIndex = idx;
+  if (tileLayer) map.removeLayer(tileLayer);
+  const prov = tileProviders[providerIndex];
+  tileLayer = L.tileLayer(prov.url, { maxZoom:19, attribution:'&copy; OpenStreetMap contributors' });
+  tileLayer.on('tileload', ()=>{ errorCount = 0; });
+  tileLayer.on('tileerror', ()=>{
+    if (++errorCount >= 4 && providerIndex < tileProviders.length-1){
+      toast(`Tile server slow — switching to ${tileProviders[providerIndex+1].name}…`);
+      useTiles(providerIndex+1);
+    }
+  });
+  tileLayer.addTo(map);
+}
+useTiles(0);
+
+// Layers: we still use groups, panes are applied on the child layers
+const polyLayer = L.layerGroup().addTo(map);
+const shopLayer = L.layerGroup().addTo(map);
+
+// data holders
+let shops=[], repByZip=new Map(), reps=new Map(), allZCTAs=[];
+let repColors = new Map(); // rep_code -> color
+
+function repColor(code){ return repColors.get(code) || '#888'; }
+
+// assign distinct colors evenly across the hue circle (with 2 lightness bands if many reps)
+function assignRepColors(){
+  const codes = Array.from(reps.keys()).sort();
+  const n = Math.max(1, codes.length);
+  const bands = n > 16 ? 2 : 1;
+  const perBand = Math.ceil(n / bands);
+  repColors.clear();
+  codes.forEach((code, i) => {
+    const idx = i % perBand;
+    const band = Math.floor(i / perBand);
+    const hue = Math.round((idx / perBand) * 360);
+    const sat = 70;
+    const light = band === 0 ? 45 : 62;
+    repColors.set(code, `hsl(${hue} ${sat}% ${light}%)`);
+  });
+}
+
+// ---------- loaders ----------
+async function loadShops(){
+  try{
+    shops = await fetch('data/shops.json',{cache:'no-store'}).then(r=>r.json());
+  } catch{
+    try{
+      const txt=await fetch('data/shops.csv',{cache:'no-store'}).then(r=>r.text());
+      const rows=csvToObjects(txt);
+      shops=rows.map(r=>({
+        name:r.name||r.Company||'Shop',
+        address:r.address||r.Address||'',
+        city:r.city||r.City||'',
+        state:r.state||r.State||'',
+        zip:r['Postal Code']||r.zip||r.Zip||'',
+        lat:parseFloat(r.lat||r.Latitude||r.latitude||r.y||''),
+        lon:parseFloat(r.Lon||r.lon||r.lng||r.Longitude||r.longitude||r.x||'')
+      })).filter(s=>isFinite(s.lat)&&isFinite(s.lon));
+    }catch{shops=[];}
+  }
+  return shops.length;
+}
+
+async function loadRepZip(){
+  let txt; 
+  try{ txt=await fetch('data/rep_zip_map.csv',{cache:'no-store'}).then(r=>r.ok?r.text():Promise.reject()); }catch{}
+  if(!txt){
+    try{ txt=await fetch('data/zip_rep_clean-6.csv',{cache:'no-store'}).then(r=>r.ok?r.text():Promise.reject()); }catch{}
+  }
+  if(!txt){ return {zips:0,reps:0}; }
+
+  const rows=csvToObjects(txt);
+  repByZip.clear(); reps.clear();
+  rows.forEach(r=>{
+    const zip = normZip(r.zip || r.ZIP || r.Zip || r.Zcta || r.ZCTA || r.GEOID || r.GEOID10 || r.GEOID20 || '');
+    const rep_code  = (r.rep_code || r.rep || r.code || '').trim();
+    const rep_full  = (r.rep_full || r.name || r.repname || '').trim();
+    const rep_label = (r.rep_label || (rep_code ? `${rep_code} (${rep_full||'Rep'})` : '')).trim();
+    if(zip) repByZip.set(zip,{rep_code, rep_full, rep_label});
+    if(rep_code && !reps.has(rep_code)) reps.set(rep_code,{label:rep_label, full:rep_full});
+  });
+  return {zips:repByZip.size, reps:reps.size};
+}
+
+async function loadZCTAs(){
+  // Adjust names here if your files have suffixes like -5 / -3
+  const files=['zcta_TX.json','zcta_NM.json','zcta_OK.json','zcta_AR.json','zcta_MS.json','zcta_LA.json'];
+  const all=[];
+  for(const f of files){
+    try{
+      const gj=await fetch('data/'+f,{cache:'no-store'}).then(r=>r.json());
+      if(gj && gj.features) all.push(...gj.features);
+    }catch(e){ /* ok if missing */ }
+  }
+  return all;
+}
+
+// ---------- renderers ----------
+function renderShops(showAll=true,activeRep=null){
+  shopLayer.clearLayers(); let bounds=L.latLngBounds([]);
+  shops.forEach(s=>{
+    if(activeRep && s.zip){
+      const m=repByZip.get(normZip(s.zip));
+      if(!m || m.rep_code!==activeRep) return;
+    }
+    // Yellow markers — in the 'shops' pane so they sit on top
+    const m=L.circleMarker([s.lat,s.lon],{
+      pane:'shops',
+      radius:5, color:'#b45309', weight:1.5, fillColor:'#facc15', fillOpacity:.95
+    }).bindPopup(
+      `<strong>${s.name||'Shop'}</strong><br>${s.address||''}<br>${s.city||''}, ${s.state||''} ${s.zip||''}`
+    );
+    m.addTo(shopLayer); bounds.extend([s.lat,s.lon]);
+  });
+
+  // Fit bounds – fallback to ZCTAs if no shops matched
+  if (bounds.isValid()) {
+    map.fitBounds(bounds.pad(0.15));
+  } else if (allZCTAs.length) {
+    const pb = L.latLngBounds([]);
+    allZCTAs.forEach(f=>{
+      const g = L.geoJSON(f);
+      try { pb.extend(g.getBounds()); } catch(_) {}
+    });
+    if (pb.isValid()) map.fitBounds(pb.pad(0.10));
+  }
+}
+
+function renderPolys(activeRep=null){
+  polyLayer.clearLayers();
+  allZCTAs.forEach(f=>{
+    const p = f.properties || {};
+    const zip = normZip(
+      p.ZCTA5CE10 ?? p.ZCTA5CE20 ?? p.ZCTA5CE ?? p.GEOID20 ?? p.GEOID10 ?? p.GEOID ?? p.ZIP ?? p.ZIP5 ?? ''
+    );
+    const m=repByZip.get(zip);
+    if(!m) return;
+    if(activeRep && m.rep_code!==activeRep) return;
+
+    L.geoJSON(f, {
+      pane:'polys',
+      style: () => ({ color: repColor(m.rep_code), weight: 1.2, fillOpacity: 0.22 })
+    })
+    .bindTooltip(`${m.rep_label} – ${zip}`)
+    .addTo(polyLayer);
+  });
+}
+
+// legend chips (up to 24 reps to keep toolbar compact)
+function renderLegend(){
+  const box = $('#legend'); box.innerHTML='';
+  Array.from(reps.keys()).sort().slice(0,24).forEach(code=>{
+    const chip = document.createElement('span');
+    chip.className='chip';
+    const dot = document.createElement('span');
+    dot.className='dot'; dot.style.background = repColor(code);
+    chip.appendChild(dot);
+    chip.appendChild(document.createTextNode(code));
+    box.appendChild(chip);
+  });
+}
+
+// ---------- UI wiring ----------
+function buildToolbar(){
+  const repSel=$('#repSel'), chkAll=$('#chkAll');
+  repSel.innerHTML = '<option value="">All Territories</option>' +
+    Array.from(reps.entries()).sort(([a],[b])=>a.localeCompare(b))
+      .map(([code,info])=>`<option value="${code}">${info.label}</option>`).join('');
+
+  function refresh(){
+    const activeRep=repSel.value||null,showAll=chkAll.checked;
+    renderPolys(activeRep);
+    renderShops(showAll,activeRep);
+  }
+  repSel.addEventListener('change',refresh);
+  chkAll.addEventListener('change',refresh);
+
+  $('#btnLocate').addEventListener('click',()=>{
+    if(!navigator.geolocation) return alert('Geolocation not supported');
+    navigator.geolocation.getCurrentPosition(p=>{
+      const {latitude,longitude}=p.coords;
+      L.circleMarker([latitude,longitude],{pane:'shops',radius:7,color:'#0b61a4',weight:2,fillColor:'#22d3ee',fillOpacity:.9}).addTo(map);
+      map.setView([latitude,longitude],12);
+    },()=>alert('Location unavailable'));
+  });
+
+  renderLegend();
+  refresh();
+}
+
+// ---------- boot ----------
+(async()=>{
+  // initial view so you don't see "nowhere" if tiles are slow
+  map.setView([31,-97], 5);
+
+  const shopCount = await loadShops();
+  const {zips:zipCount, reps:repCount} = await loadRepZip();
+  assignRepColors();
+  allZCTAs = await loadZCTAs();
+
+  showDebug(`Status · shops:${shopCount} · zips:${zipCount} · reps:${repCount} · zcta:${allZCTAs.length}`);
+
+  buildToolbar();
+
+  // Ensure tiles reflow after fonts/toolbar layout
+  setTimeout(()=> map.invalidateSize(), 0);
+})();
+</script>
+</body>
+</html>
