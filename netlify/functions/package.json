@@ -1,0 +1,10 @@
+{
+  "name": "col-functions",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "dependencies": {
+    "nodemailer": "^6.9.13",
+    "pdfkit": "^0.15.0"
+  }
+}
