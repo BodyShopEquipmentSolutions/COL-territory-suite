@@ -132,6 +132,7 @@ th,td{padding:10px;border-bottom:1px solid var(--stroke);text-align:left;vertica
         </div>
         <div style="display:flex;gap:8px">
           <button class="btn" id="exportPdf">Export PDF</button>
+          <button class="btn" id="sendQuote">Send</button>
         </div>
       </div>
 
@@ -372,7 +373,7 @@ function renderCart(){
   const taxPct=parseFloat(taxPctEl.value||'0')/100; const freight=parseFloat(freightEl.value||'0');
   const tax=sum*(isFinite(taxPct)?taxPct:0); const grand=sum+(isFinite(tax)?tax:0)+(isFinite(freight)?freight:0);
   subtotalEl.textContent=fmtUSD(sum); taxAmtEl.textContent=fmtUSD(isFinite(tax)?tax:0);
-  freightAmtEl.textContent=fmtUSD(isFinite(freight)?freight:0); grandEl.textContent=fmtUSD(grand);
+  freightAmtEl.textContent=fmtUSD(isFinite(freight)?freight:0); grandEl.textContent=fmtUSD(isFinite(grand)?grand:0);
 }
 taxPctEl.addEventListener('input',renderCart); freightEl.addEventListener('input',renderCart);
 
@@ -429,31 +430,69 @@ document.querySelector('#exportPdf').addEventListener('click', exportPdf);
 // If user prints via browser menu, still populate
 window.onbeforeprint = fillPdfDoc;
 
+/* ------------------- SEND TO NETLIFY FUNCTION ------------------- */
+document.querySelector('#sendQuote').addEventListener('click', async () => {
+  if (!cart.length) {
+    alert('Please add at least one line item before sending.');
+    return;
+  }
+
+  const data = {
+    customer: $('#customer').value,
+    contact: $('#contact').value,
+    phone: $('#phone').value,
+    email: $('#email').value,
+    address: $('#address').value,
+    city: $('#city').value,
+    state: $('#state').value,
+    zip: $('#zip').value,
+    rep: $('#rep').value,
+    region: $('#region').value,
+    date: $('#date').value,
+    notes: $('#overallNotes').value,
+    to: (document.querySelector('input[name="to"]:checked')||{}).value || 'Bodyshop.e.s@gmail.com',
+    cart: cart,
+    totals: {
+      subtotal: $('#subtotal').textContent,
+      tax: $('#taxAmt').textContent,
+      freight: $('#freightAmt').textContent,
+      grand: $('#grand').textContent
+    }
+  };
+
+  const btn = document.querySelector('#sendQuote');
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  try {
+    const res = await fetch('/.netlify/functions/send-quote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(out.error || res.statusText);
+
+    alert('Quote sent successfully!');
+  } catch (err) {
+    console.error(err);
+    alert('Send failed: ' + (err.message || 'Unknown error'));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = old;
+  }
+});
+
 /* ------------------- boot ------------------- */
 (async()=>{
   $('#date').value = new Date().toISOString().slice(0,10);
   await loadContacts();
-  // price list: 2025…csv then price_list.csv fallback
   PRICE = await tryCsv('data/2025-COL_Distributor_ListPrice_06302025.csv')
        || await tryCsv('data/price_list.csv') || [];
   setStatus(PRICE.length?`Loaded ${PRICE.length} parts · ${CONTACTS.length} contacts`:'Price list not found — check /data filename', !!PRICE.length);
 
-  // Hook up parts search
-  const runSearch=()=>{
-    const q=$('#itemSearch').value;
-    const exact=PRICE.filter(r=>(r.num||'').toLowerCase()===q.toLowerCase());
-    const starts=PRICE.filter(r=>(r.num||'').toLowerCase().startsWith(q.toLowerCase()));
-    const others=PRICE.filter(r=>(r.num||'').toLowerCase().includes(q.toLowerCase())||(r.desc||'').toLowerCase().includes(q.toLowerCase()));
-    const seen=new Set(); const res=[...exact,...starts,...others].filter(r=>{const k=(r.num||'')+'|'+(r.desc||''); if(seen.has(k))return false; seen.add(k); return true;});
-    const tbody=$('#parts tbody'); tbody.innerHTML=''; $('#resCount').value=res.length;
-    const suggest=$('#suggestItem'); suggest.innerHTML='';
-    res.forEach((r,i)=>{
-      if(i<10){ const d=document.createElement('div'); d.className='opt'; d.textContent=`${r.num} — ${r.desc} (${r.price})`; d.onclick=()=>{addToCart(r);suggest.style.display='none';}; suggest.appendChild(d); }
-      const tr=document.createElement('tr'); tr.innerHTML=`<td>${r.num}</td><td>${r.desc}</td><td>${r.price}</td><td><button class="btn">Add</button></td>`;
-      tr.querySelector('button').onclick=()=>addToCart(r); tbody.appendChild(tr);
-    });
-    suggest.style.display=res.length?'block':'none';
-  };
   let t; $('#itemSearch').addEventListener('input',()=>{clearTimeout(t); t=setTimeout(runSearch,150);});
   $('#itemSearch').addEventListener('focus',()=>{ if($('#itemSearch').value) runSearch(); });
   document.addEventListener('click',e=>{ if(!$('#suggestItem').contains(e.target)&&e.target!==$('#itemSearch')) $('#suggestItem').style.display='none'; });
