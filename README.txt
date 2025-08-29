@@ -1,19 +1,20 @@
-# COL Territory Suite
+COL Suite — Regenerated Package
+=================================
+This bundle includes an updated index.html with FOUR buttons:
+- View Map
+- Submit Service Request
+- Parts Look-up (https://sales.car-o-liner.se/products)
+- Brochures
 
-Progressive Web App (PWA) for sales and service.
+Also included:
+- brochures.html (list page)
+- brochure.html (detail page)
+- data/brochures.json (prefilled with your items)
+- brochures/ (PDFs)
 
-## Structure
-- index.html (home)
-- map.html (interactive rep/shop map)
-- service.html (service request form)
-- manifest.json + service-worker.js (PWA install/offline)
-- assets/logo.png
-- icons/icon-192.png, icon-512.png
-- data/ (all datasets)
-- netlify.toml
-- netlify/functions/send-quote.js + package.json (serverless email PDF)
+Install:
+1) Copy these into your repo root (next to your existing index.html).
+2) Commit and push.
+3) Visit / to see the buttons, and /brochures.html for the brochures list.
 
-## Deploy
-1. Push to GitHub
-2. Connect repo to Netlify (set Publish dir = ., Functions dir = netlify/functions)
-3. Add SMTP_* environment variables for email.
+Generated: 2025-08-29

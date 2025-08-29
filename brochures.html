@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Brochures – Car-O-Liner Southwest</title>
+<style>
+:root{--brand:#0B61A4;--ink:#f7fafc;--panel:rgba(255,255,255,.06);--stroke:rgba(255,255,255,.14);}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--brand);color:var(--ink);font-family:ui-rounded,system-ui,-apple-system,Segoe UI,Inter,Roboto,sans-serif}
+.container{max-width:1100px;margin:0 auto;padding:16px}
+.card{background:var(--panel);border:1px solid var(--stroke);border-radius:24px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.hbar{display:flex;gap:12px;align-items:center;margin-bottom:10px;padding:10px 14px}
+.logo{height:38px}
+.btn{background:#111827;border:1px solid var(--stroke);color:var(--ink);border-radius:12px;padding:10px 14px;cursor:pointer;text-decoration:none}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px}
+input[type="search"],select{width:auto;min-width:220px;padding:10px 12px;border-radius:12px;border:1px solid var(--stroke);background:rgba(0,0,0,.25);color:var(--ink)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media (max-width:980px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){.grid{grid-template-columns:1fr}}
+.card-sm{padding:14px;border-radius:16px;display:flex;gap:12px}
+.card-sm img{width:88px;height:88px;object-fit:cover;border-radius:10px;border:1px solid var(--stroke);background:#0f172a}
+.card-sm h3{margin:0 0 6px;font-size:16px}
+.meta{opacity:.85;font-size:12px;margin-bottom:6px}
+.tags{margin-top:4px}
+.tag{display:inline-block;background:rgba(255,255,255,.12);border:1px solid var(--stroke);padding:3px 8px;border-radius:999px;font-size:12px;margin:2px 6px 0 0}
+a.open{display:inline-block;margin-top:8px;background:#0f172a;border:1px solid var(--stroke);padding:8px 12px;border-radius:10px;color:#fff;text-decoration:none}
+a.open:hover{filter:brightness(1.08)}
+.badge{font-size:12px;opacity:.9}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="card hbar">
+    <img class="logo" src="assets/logo.png" alt="" onerror="this.style.display='none'">
+    <h1 style="margin:0">Brochures</h1>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <a class="btn" href="index.html">Home</a>
+      <a class="btn" href="service.html">Service</a>
+      <a class="btn" href="map.html">Map</a>
+    </div>
+  </div>
+
+  <div class="card" style="padding:14px">
+    <div class="controls">
+      <input id="q" type="search" placeholder="Search brochures… (name/model/keywords)"/>
+      <select id="cat"><option value="">All categories</option></select>
+      <span id="status" class="badge">Loading…</span>
+    </div>
+    <div id="grid" class="grid"></div>
+  </div>
+</div>
+
+<script>
+const DATA_URL = 'data/brochures.json';
+const $=s=>document.querySelector(s);
+const grid=$('#grid'), q=$('#q'), cat=$('#cat'), status=$('#status');
+let ALL=[];
+
+function toCard(b){
+  const img = b.image ? `<img src="${b.image}" alt="">` : `<img alt="">`;
+  const tags = (b.tags||[]).map(t=>`<span class="tag">${t}</span>`).join(' ');
+  const meta = [b.category].filter(Boolean).join(' • ');
+  return `
+    <div class="card-sm">
+      ${img}
+      <div style="flex:1">
+        <h3>${b.title}</h3>
+        <div class="meta">${meta}</div>
+        <div style="opacity:.9">${b.summary||''}</div>
+        <div class="tags">${tags}</div>
+        <div style="margin-top:8px">
+          <a class="open" href="brochure.html?id=${encodeURIComponent(b.id)}">View details</a>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function render(){
+  const text=(q.value||'').toLowerCase().trim();
+  const sel=cat.value;
+  const res=ALL.filter(b=>{
+    if(sel && b.category!==sel) return false;
+    if(!text) return true;
+    const hay=[b.title,b.category,(b.tags||[]).join(' '),b.summary||''].join(' ').toLowerCase();
+    return hay.includes(text);
+  });
+  grid.innerHTML = res.map(toCard).join('') || `<div style="opacity:.85;padding:14px">No brochures found.</div>`;
+  status.textContent = `${res.length} shown / ${ALL.length} total`;
+}
+
+async function load(){
+  try{
+    const r=await fetch(DATA_URL,{cache:'no-store'});
+    if(!r.ok) throw new Error('brochures.json not found');
+    ALL=await r.json();
+  }catch(e){
+    ALL=[];
+  }
+  const cats=Array.from(new Set(ALL.map(x=>x.category).filter(Boolean))).sort();
+  cat.innerHTML = `<option value="">All categories</option>` + cats.map(c=>`<option>${c}</option>`).join('');
+  status.textContent = `Loaded ${ALL.length} brochures`;
+  render();
+}
+
+q.addEventListener('input',render);
+cat.addEventListener('change',render);
+load();
+</script>
+</body>
+</html>

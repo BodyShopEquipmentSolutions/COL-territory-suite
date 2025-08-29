@@ -1,13 +1,43 @@
-<!doctype html><html lang="en"><head>
-<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<link rel="manifest" href="manifest.json"><link rel="icon" href="icons/icon-192.png"><title>Car‑O‑Liner Southwest</title>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<title>Car-O-Liner Southwest</title>
 <link rel="stylesheet" href="css.css">
-<style>.wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}.hero{padding:44px;text-align:center;max-width:720px}
-.hero img{height:64px;margin-bottom:12px;filter:drop-shadow(0 6px 24px rgba(0,0,0,.25))}</style></head>
+<style>
+.wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.hero{padding:44px;text-align:center;max-width:720px}
+.hero img{height:64px;margin-bottom:12px;filter:drop-shadow(0 6px 24px rgba(0,0,0,.25))}
+.cta{display:inline-block;margin:6px;padding:14px 28px;font-size:18px;font-weight:600;color:#fff;
+background:linear-gradient(135deg,#0B61A4,#2B8CBE);border:none;border-radius:12px;text-decoration:none;
+transition:all .25s ease;box-shadow:0 6px 15px rgba(0,0,0,.25)}
+.cta:hover{transform:translateY(-2px) scale(1.02);background:linear-gradient(135deg,#2B8CBE,#0B61A4);
+box-shadow:0 8px 20px rgba(0,0,0,.35)}
+.cta:active{transform:translateY(1px) scale(.98);box-shadow:0 4px 10px rgba(0,0,0,.2)}
+</style>
+</head>
 <body>
-<div class="wrap"><div class="card hero">
-<img src="assets/logo.png" alt="COL SW logo"><h1 style="margin:6px 0 12px">Interactive Territory Suite</h1>
-<p class="note">Tools for Sales Reps and our Service Team.</p>
-<div style="margin-top:12px"><a class="cta" href="map.html">🗺️ View Map</a><a class="cta" href="service.html">🧰 Submit Service Request</a></div>
-<small class="note">Tip: Click on the Share icon [^] at the bottom of your browser and tap Add to Home Screen for an app‑like experience.</>
-small<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('service-worker.js')}</script></body></html>
+<div class="wrap">
+  <div class="card hero">
+    <img src="assets/logo.png" alt="COL SW logo">
+    <h1 style="margin:6px 0 12px">Interactive Territory Suite</h1>
+    <p class="note">Tools for Sales Reps and our Service Team.</p>
+    <div style="margin-top:12px">
+      <a class="cta" href="map.html">🗺️ View Map</a>
+      <a class="cta" href="service.html">🧰 Submit Service Request</a>
+      <a class="cta" href="https://sales.car-o-liner.se/products" target="_blank" rel="noopener">🔍 Parts Look-up</a>
+      <a class="cta" href="brochures.html">📚 Brochures</a>
+    </div>
+    <small class="note">
+      Tip: Add to Home Screen for an app-like experience.
+    </small>
+  </div>
+</div>
+<script>
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('service-worker.js'); }
+</script>
+</body>
+</html>

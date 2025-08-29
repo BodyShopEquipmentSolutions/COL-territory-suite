@@ -1,0 +1,40 @@
+[
+  {
+    "id": "benchrack",
+    "title": "BenchRack Systems",
+    "category": "Frame & Racks",
+    "tags": [
+      "bench",
+      "frame rack",
+      "collision"
+    ],
+    "pdf": "https://example.com/brochures/benchrack.pdf",
+    "image": "https://example.com/images/benchrack.jpg",
+    "summary": "Heavy-duty bench systems for straightening and repairs."
+  },
+  {
+    "id": "vision2",
+    "title": "Car-O-Tronic Vision2",
+    "category": "Measuring",
+    "tags": [
+      "measurement",
+      "vision2",
+      "car-o-tronic"
+    ],
+    "pdf": "https://example.com/brochures/vision2.pdf",
+    "image": "https://example.com/images/vision2.jpg",
+    "summary": "Advanced electronic measuring for accurate diagnostics."
+  },
+  {
+    "id": "adas-overview",
+    "title": "ADAS Solutions Overview",
+    "category": "ADAS",
+    "tags": [
+      "calibration",
+      "safety"
+    ],
+    "pdf": "https://example.com/brochures/adas-overview.pdf",
+    "image": "https://example.com/images/adas.jpg",
+    "summary": "Calibrations and tools for modern ADAS systems."
+  }
+]

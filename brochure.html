@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Brochure – Car-O-Liner Southwest</title>
+<style>
+:root{--brand:#0B61A4;--ink:#f7fafc;--panel:rgba(255,255,255,.06);--stroke:rgba(255,255,255,.14);}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--brand);color:var(--ink);font-family:ui-rounded,system-ui,-apple-system,Segoe UI,Inter,Roboto,sans-serif}
+.container{max-width:1100px;margin:0 auto;padding:16px}
+.card{background:var(--panel);border:1px solid var(--stroke);border-radius:24px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.hbar{display:flex;gap:12px;align-items:center;margin-bottom:10px;padding:10px 14px}
+.logo{height:38px}
+.btn{background:#111827;border:1px solid var(--stroke);color:var(--ink);border-radius:12px;padding:10px 14px;cursor:pointer;text-decoration:none}
+.wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;padding:16px}
+@media (max-width:900px){.wrap{grid-template-columns:1fr}}
+.hero{min-height:260px;border-radius:16px;border:1px solid var(--stroke);background:#0f172a url('') center/cover no-repeat}
+h1{margin:0 0 8px}
+.meta{opacity:.9;margin-bottom:8px}
+.tag{display:inline-block;background:rgba(255,255,255,.12);border:1px solid var(--stroke);padding:3px 8px;border-radius:999px;font-size:12px;margin:2px 6px 0 0}
+.viewer{height:70vh;border:1px solid var(--stroke);border-radius:16px;background:#0b1220}
+.viewer iframe,.viewer object{width:100%;height:100%;border:0;border-radius:16px;background:#fff}
+.notice{font-size:13px;opacity:.9;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="card hbar">
+    <img class="logo" src="assets/logo.png" alt="" onerror="this.style.display='none'">
+    <h1 style="margin:0" id="title">Brochure</h1>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <a class="btn" href="brochures.html">← Back</a>
+      <a class="btn" href="index.html">Home</a>
+    </div>
+  </div>
+
+  <div class="card wrap">
+    <div>
+      <div id="hero" class="hero"></div>
+      <h1 id="h1" style="margin-top:12px"></h1>
+      <div class="meta"><span id="category"></span></div>
+      <div id="summary" style="opacity:.95;margin:8px 0 6px"></div>
+      <div id="tags" style="margin-top:6px"></div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <a id="openPdf" class="btn" href="#" target="_blank" rel="noopener">Open brochure (PDF)</a>
+        <a id="downloadPdf" class="btn" href="#" download>Download PDF</a>
+      </div>
+    </div>
+
+    <div>
+      <div class="viewer" id="viewer">
+        <!-- PDF iframe/object will be injected here if same-origin allows -->
+      </div>
+      <div class="notice" id="note"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DATA_URL='data/brochures.json';
+const q = new URLSearchParams(location.search);
+const id = q.get('id');
+
+const el = s=>document.querySelector(s);
+const setHero = (url)=>{ if(url) el('#hero').style.backgroundImage = `url("${url}")`; };
+
+function sameOrigin(url){
+  try{
+    const u=new URL(url, location.href);
+    return u.origin===location.origin;
+  }catch{ return false; }
+}
+
+async function load(){
+  if(!id){ el('#title').textContent='Not found'; el('#h1').textContent='Missing id'; return; }
+  let list=[];
+  try{
+    const r=await fetch(DATA_URL,{cache:'no-store'});
+    if(!r.ok) throw 0;
+    list=await r.json();
+  }catch(e){ list=[]; }
+
+  const item = list.find(x=>x.id===id);
+  if(!item){ el('#title').textContent='Not found'; el('#h1').textContent='Brochure not found'; return; }
+
+  el('#title').textContent = item.title;
+  el('#h1').textContent = item.title;
+  el('#category').textContent = item.category || '';
+  el('#summary').textContent = item.summary || '';
+  el('#tags').innerHTML = (item.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('');
+  setHero(item.image);
+
+  // Links
+  el('#openPdf').href = item.pdf;
+  el('#downloadPdf').href = item.pdf;
+
+  // Try to embed the PDF if same-origin; otherwise advise to use Open button
+  const canEmbed = sameOrigin(item.pdf);
+  if(canEmbed){
+    const obj = document.createElement('object');
+    obj.data = item.pdf;
+    obj.type = 'application/pdf';
+    obj.style.width = '100%';
+    obj.style.height = '100%';
+    el('#viewer').appendChild(obj);
+    el('#note').textContent = '';
+  } else {
+    el('#note').textContent = 'This brochure is hosted on another site. Click “Open brochure (PDF)” to view it in a new tab.';
+  }
+}
+load();
+</script>
+</body>
+</html>
