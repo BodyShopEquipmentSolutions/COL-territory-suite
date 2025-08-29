@@ -1,0 +1,92 @@
+[
+  {
+    "id": "benchrack",
+    "title": "BenchRack",
+    "category": "Benches & Racks",
+    "tags": ["bench", "rack"],
+    "pdf": "brochures/32426_BenchRack_2018-11_Brochure_EN_screen.pdf",
+    "image": "",
+    "productUrl": "https://car-o-liner.com/product/benchrack/",
+    "summary": "Drive-on bench with tilt feature, lift, and removable ramps."
+  },
+  {
+    "id": "benchrack-versa",
+    "title": "BenchRack Versa",
+    "category": "Benches & Racks",
+    "tags": ["bench", "in-ground"],
+    "pdf": "brochures/sscolbw23002a-benchrack-versa-EU-en-WEB.pdf",
+    "image": "",
+    "productUrl": "https://car-o-liner.com/product/benchrack-versa/",
+    "summary": "In-ground lifting bench with low-clearance ramps and 10-ton draw aligner."
+  },
+  {
+    "id": "speed-3t",
+    "title": "Speed 3T",
+    "category": "Benches & Racks",
+    "tags": ["bench", "scissor"],
+    "pdf": "brochures/32914_Speed_3T_2022-02_Brochure_EN_screen.pdf",
+    "image": "",
+    "productUrl": "https://car-o-liner.com/product/speed-speed-plus/",
+    "summary": "Low-profile scissor lift bench for light vehicle repairs."
+  },
+  {
+    "id": "b731-truck-clamping",
+    "title": "B731 Truck Clamping",
+    "category": "Clamping & Holding",
+    "tags": ["truck", "clamping"],
+    "pdf": "brochures/sscolAH21001_B731_TruckClamp_10-2021.pdf",
+    "image": "",
+    "productUrl": "https://car-o-liner.com/product/b731/",
+    "summary": "Universal 4-point truck clamping for full-frame pickups, SUVs and vans."
+  },
+  {
+    "id": "evo-1-2-3",
+    "title": "EVO 1 2 3",
+    "category": "Anchoring & Fixturing",
+    "tags": ["anchoring", "fixturing"],
+    "pdf": "brochures/35175_EVO_2018-11_Brochure-4P_EN_screen.pdf",
+    "image": "",
+    "productUrl": "https://car-o-liner.com/product/evo-1-2-3/",
+    "summary": "Modular anchoring/fixturing system; combine kits for structural repairs."
+  },
+  {
+    "id": "vision2-measuring",
+    "title": "Vision2 Measuring (Car-O-Data)",
+    "category": "Measuring",
+    "tags": ["measuring", "car-o-data"],
+    "pdf": "brochures/35172W_Car-O-Data_Vision2_2018-11_Brochure-WEB_EN.pdf",
+    "image": "",
+    "productUrl": "https://car-o-liner.com/product/vision2-software/",
+    "summary": "Process-oriented measuring with the Car-O-Data database."
+  },
+  {
+    "id": "ctr9-resistance-spot-welder",
+    "title": "CTR9 Resistance Spot Welder",
+    "category": "Welding",
+    "tags": ["welding", "spot"],
+    "pdf": "brochures/sscoljw21010-CTR9_brochure-EU-en.pdf",
+    "image": "",
+    "productUrl": "https://car-o-liner.com/product/ctr9/",
+    "summary": "Automatic inverter spot welder with telescopic support arm and C-tong."
+  },
+  {
+    "id": "cmi300",
+    "title": "CMI300 Pulse",
+    "category": "Welding",
+    "tags": ["welding", "mig"],
+    "pdf": "brochures/49467W_CMI300Pulse_2020-11_BrochureWEB_EN.pdf",
+    "image": "",
+    "productUrl": "https://car-o-liner.com/product/cmi-300/",
+    "summary": "Digital MIG/MAG welder with pulse and optional DUO/TRIO wire setups."
+  },
+  {
+    "id": "workshop-solutions",
+    "title": "Workshop Solutions (Tool Boards & Wall Systems)",
+    "category": "Workshop Solutions",
+    "tags": ["organization"],
+    "pdf": "https://car-o-liner.com/product/tool-boards-and-wall-systems/",
+    "image": "",
+    "productUrl": "https://car-o-liner.com/product/tool-boards-and-wall-systems/",
+    "summary": "Tool boards and wall systems for organized, efficient workspaces."
+  }
+]
