@@ -313,10 +313,10 @@ export const handler = async (event) => {
     ];
     const linesCsv = linesCsvRows.map(r => r.map(escapeCsv).join(",")).join("\n");
     // Create the ZIP
-    const zip = new JSZip();
-    zip.file("invoice_header.csv", headerCsv);
-    zip.file("invoice_lines.csv", linesCsv);
-    const zipBuf = await zip.generateAsync({ type: "nodebuffer" });
+    const archive = new JSZip();
+    archive.file("invoice_header.csv", headerCsv);
+    archive.file("invoice_lines.csv", linesCsv);
+    const zipBuf = await archive.generateAsync({ type: "nodebuffer" });
     // Determine a friendly ZIP name: use customer/rep/invoice when available
     const safe = (s) => (s || "").toString().replace(/[^A-Za-z0-9.-]+/g, "_");
     const parts = [safe(customer), safe(rep), safe(invoice)].filter(Boolean);
