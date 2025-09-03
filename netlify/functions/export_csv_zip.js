@@ -2,68 +2,46 @@
 //
 // Serverless function to accept a PDF invoice (base64 encoded),
 // parse it into header and line items, generate two CSV files and
-// return them in a single ZIP archive. This file inlines the
-// improved parsing logic from split.js to make the function fully
-// self‑contained. The resulting ZIP is named using the shop/customer,
-// sales rep and invoice number when available.
+// return them in a single ZIP archive. This version uses CommonJS
+// syntax and renames the ZIP instance to avoid name conflicts.
 
-import pdf from "pdf-parse";
-import JSZip from "jszip";
+const pdf = require('pdf-parse');
+const JSZip = require('jszip');
 
 // -----------------------------------------------------------------------------
 // Regex and helper constants for parsing
 // -----------------------------------------------------------------------------
 
-// A list of U.S. states used to help identify zip codes appearing in an
-// address line. When combined with a numeric ZIP pattern this helps limit
-// false positives.
 const usStates = [
   "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME",
   "MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA",
   "RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"
 ];
 const STATE_RE = new RegExp(`\\b(?:${usStates.join("|")})\\b`);
-
-// Money and quantity formats used in line item parsing. Accepts optional
-// commas and decimal places as well as negative values.
-const MONEY_RE = String.raw`-?\$?\d{1,3}(?:,\d{3})*(?:\.\d{2})?|-?\$?\d+(?:\.\d{2})?`;
-const QTY_RE   = String.raw`\d+(?:\.\d+)?`;
+const MONEY_RE = String.raw`-?\\$?\\d{1,3}(?:,\\d{3})*(?:\\.\\d{2})?|-?\\$?\\d+(?:\\.\\d{2})?`;
+const QTY_RE   = String.raw`\\d+(?:\\.\\d+)?`;
 
 // -----------------------------------------------------------------------------
 // Utility functions for cleaning and parsing text
 // -----------------------------------------------------------------------------
 
-/**
- * Normalize PDF text into an array of trimmed, non‑empty lines. Leading and
- * trailing whitespace is removed and non‑breaking spaces are converted to
- * regular spaces. Empty lines are skipped entirely.
- *
- * @param {string} text The raw text extracted from pdf-parse.
- * @returns {string[]} The cleaned array of lines.
- */
 function cleanLines(text) {
   return text
-    .replace(/\r/g, "")
-    .split("\n")
-    .map(l => l.replace(/\u00A0/g, " ").replace(/\s+$/g, "").replace(/^\s+/g, ""))
+    .replace(/\\r/g, "")
+    .split("\\n")
+    .map(l => l.replace(/\\u00A0/g, " ").replace(/\\s+$/g, "").replace(/^\\s+/g, ""))
     .filter(l => l.length > 0);
 }
 
-/** Convert a money string (e.g. "$1,234.56") into a number or null. */
 function unmoney(s) {
   if (s == null) return null;
-  const v = String(s).replace(/\$/g, "").replace(/,/g, "").trim();
+  const v = String(s).replace(/\\$/g, "").replace(/,/g, "").trim();
   return v === "" ? null : Number(v);
 }
 
-/**
- * Parse a date in US styles (MM/DD/YYYY, M/D/YY, with slash or dash) into
- * a normalized MM/DD/YYYY string. If the year is two digits it is pivoted
- * assuming 1970–2069.
- */
 function parseDate(raw) {
   if (!raw) return null;
-  const m = raw.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  const m = raw.match(/(\\d{1,2})[\\/\\-](\\d{1,2})[\\/\\-](\\d{2,4})/);
   if (!m) return null;
   let [ , mm, dd, yyyy ] = m;
   if (yyyy.length === 2) {
@@ -75,14 +53,10 @@ function parseDate(raw) {
   return `${mm2}/${dd2}/${yyyy}`;
 }
 
-/** Attempt to locate a customer name near the top of the invoice. Looks for
- * common prefixes such as "Customer", "Bill To" or "Sold To" and returns
- * whatever follows. If none are found, it will pick the first plausible
- * line following a "Bill To" block. */
 function findCustomer(lines) {
   const custMarkers = [
-    /^(?:Customer|Bill To|Sold To)\s*:\s*(.+)$/i,
-    /^(?:Customer|Bill To|Sold To)\s+(.+)$/i,
+    /^(?:Customer|Bill To|Sold To)\\s*:\\s*(.+)$/i,
+    /^(?:Customer|Bill To|Sold To)\\s+(.+)$/i,
   ];
   for (const l of lines.slice(0, 40)) {
     for (const re of custMarkers) {
@@ -94,7 +68,7 @@ function findCustomer(lines) {
   if (idx >= 0) {
     for (let i = idx + 1; i < Math.min(idx + 5, lines.length); i++) {
       const t = lines[i];
-      if (!/^(Address|Phone|Email|Fax|Attn|City|State|Zip)[:\s]/i.test(t) && t.length > 3) {
+      if (!/^(Address|Phone|Email|Fax|Attn|City|State|Zip)[:\\s]/i.test(t) && t.length > 3) {
         return t.trim();
       }
     }
@@ -102,38 +76,34 @@ function findCustomer(lines) {
   return null;
 }
 
-/** Locate the invoice number by looking for "Invoice" followed by an ID. */
 function findInvoice(lines) {
-  const re = /(?:Invoice\s*(?:#|No\.?|Number)?\s*[:\-]?\s*)([A-Z0-9\-]+)/i;
+  const re = /(?:Invoice\\s*(?:#|No\\.?|Number)?\\s*[:\\-]?\\s*)([A-Z0-9\\-]+)/i;
   for (const l of lines.slice(0, 80)) {
     const m = l.match(re);
     if (m) return m[1].trim();
   }
   for (const l of lines.slice(0, 80)) {
-    const m = l.match(/\bINVOICE\s+([A-Z0-9\-]+)/i);
+    const m = l.match(/\\bINVOICE\\s+([A-Z0-9\\-]+)/i);
     if (m) return m[1].trim();
   }
   return null;
 }
 
-/** Find the invoice date. Accepts "Invoice Date" or "Date" labels, or
- * the first date‐like pattern near the top of the document. */
 function findDate(lines) {
-  const re = /(?:Invoice\s*Date|Date)\s*[:\-]?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i;
+  const re = /(?:Invoice\\s*Date|Date)\\s*[:\\-]?\\s*(\\d{1,2}[\\/\\-]\\d{1,2}[\\/\\-]\\d{2,4})/i;
   for (const l of lines.slice(0, 80)) {
     const m = l.match(re);
     if (m) return parseDate(m[1]);
   }
   for (const l of lines.slice(0, 50)) {
-    const m = l.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/);
+    const m = l.match(/(\\d{1,2}[\\/\\-]\\d{1,2}[\\/\\-]\\d{2,4})/);
     if (m) return parseDate(m[1]);
   }
   return null;
 }
 
-/** Find the sales rep or salesperson. Recognises several label variants. */
 function findRep(lines) {
-  const re = /(?:Sales\s*Rep|Salesperson|Sold\s*By|Rep)\s*[:\-]?\s*([A-Za-z .,'-]+)(?:\s{2,}|$)/i;
+  const re = /(?:Sales\\s*Rep|Salesperson|Sold\\s*By|Rep)\\s*[:\\-]?\\s*([A-Za-z .,'-]+)(?:\\s{2,}|$)/i;
   for (const l of lines.slice(0, 120)) {
     const m = l.match(re);
     if (m) return m[1].trim();
@@ -141,10 +111,8 @@ function findRep(lines) {
   return null;
 }
 
-/** Extract a ZIP code (5 or 9 digits with optional dash) from the top of the
- * invoice. Prioritises occurrences on the same line as a state abbreviation. */
 function findZip(lines) {
-  const zipRe = /\b(\d{5}(?:-\d{4})?)\b/;
+  const zipRe = /\\b(\\d{5}(?:-\\d{4})?)\\b/;
   for (const l of lines.slice(0, 50)) {
     if (STATE_RE.test(l) && zipRe.test(l)) {
       const m = l.match(zipRe);
@@ -158,14 +126,12 @@ function findZip(lines) {
   return null;
 }
 
-/** Identify the line number where the table header begins. Looks for
- * occurrences of Activity/Description/Qty/Rate/Amount (case‐insensitive). */
 function findTableStart(lines) {
   const headerRe = /ACTIVITY/i;
   const descRe   = /DESCRIPTION/i;
-  const qtyRe    = /\bQTY\b|\bQUANTITY\b/i;
-  const rateRe   = /\bRATE\b|\bPRICE\b/i;
-  const amtRe    = /\bAMOUNT\b|\bEXT\.?\b|\bTOTAL\b/i;
+  const qtyRe    = /\\bQTY\\b|\\bQUANTITY\\b/i;
+  const rateRe   = /\\bRATE\\b|\\bPRICE\\b/i;
+  const amtRe    = /\\bAMOUNT\\b|\\bEXT\\.?\\b|\\bTOTAL\\b/i;
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i];
     if (headerRe.test(l) && descRe.test(l) && qtyRe.test(l) && rateRe.test(l) && amtRe.test(l)) {
@@ -175,27 +141,18 @@ function findTableStart(lines) {
   return -1;
 }
 
-/** Determine if a row should stop table parsing. Stops at Subtotal/Tax/Total etc. */
 function shouldStopRow(line) {
-  return /^(Subtotal|Sub\-Total|Tax|Sales Tax|Total|Balance Due)\b/i.test(line) ||
-         /^INVOICE\b/i.test(line) ||
-         /^Page \d+/i.test(line);
+  return /^(Subtotal|Sub\\-Total|Tax|Sales Tax|Total|Balance Due)\\b/i.test(line) ||
+         /^INVOICE\\b/i.test(line) ||
+         /^Page \\d+/i.test(line);
 }
 
-/**
- * Parse the line items starting from the header index. Each row may wrap
- * across multiple lines if the description is long. This function uses
- * trailing QTY/RATE/AMOUNT to delineate rows and splits the left portion
- * into activity and description. If a continuation line has no numbers
- * at the end, it is appended to the previous item's description.
- */
 function parseLines(lines, headerIdx) {
   if (headerIdx < 0) return [];
   const start = headerIdx + 1;
   const out = [];
-  // Tail pattern capturing Qty, Rate, Amount at the end of a line
   const tailRe = new RegExp(
-    String.raw`(${QTY_RE})\s+(${MONEY_RE})\s+(${MONEY_RE})$`
+    String.raw`(${QTY_RE})\\s+(${MONEY_RE})\\s+(${MONEY_RE})$`
   );
   for (let i = start; i < lines.length; i++) {
     const raw = lines[i];
@@ -205,7 +162,7 @@ function parseLines(lines, headerIdx) {
     if (mTail) {
       const trailStart = raw.lastIndexOf(mTail[0]);
       const left = raw.slice(0, trailStart).trim();
-      const mLeft = left.match(/^([A-Za-z0-9._\-/]+)\s+(.*)$/);
+      const mLeft = left.match(/^([A-Za-z0-9._\\-/]+)\\s+(.*)$/);
       let activity;
       let description;
       if (mLeft) {
@@ -225,7 +182,7 @@ function parseLines(lines, headerIdx) {
       continue;
     }
     if (out.length === 0) {
-      const mSeed = raw.match(/^([A-Za-z0-9._\-/]+)\s+(.*)$/);
+      const mSeed = raw.match(/^([A-Za-z0-9._\\-/]+)\\s+(.*)$/);
       if (mSeed) {
         out.push({
           activity: mSeed[1].trim(),
@@ -249,19 +206,7 @@ function parseLines(lines, headerIdx) {
 // Main handler
 // -----------------------------------------------------------------------------
 
-/**
- * Netlify handler to process an invoice PDF and return a ZIP of two CSVs.
- *
- * Expected input (JSON POST):
- *   {
- *     filename: "invoice.pdf",     // original file name (optional)
- *     mimeType: "application/pdf", // MIME type (optional)
- *     base64: "..."               // base64 encoded PDF
- *   }
- *
- * Returns a binary ZIP with invoice_header.csv and invoice_lines.csv.
- */
-export const handler = async (event) => {
+exports.handler = async function (event) {
   try {
     const isJson = event.headers["content-type"]?.includes("application/json");
     if (!isJson) {
@@ -275,12 +220,10 @@ export const handler = async (event) => {
     if (!base64) {
       return { statusCode: 400, body: JSON.stringify({ error: "Missing 'base64' PDF content" }) };
     }
-    // Decode the provided PDF into a buffer
     const pdfBuf = Buffer.from(base64, "base64");
     const data = await pdf(pdfBuf);
     const rawText = data.text || "";
     const lines = cleanLines(rawText);
-    // Extract header fields and line items
     const customer = findCustomer(lines);
     const invoice  = findInvoice(lines);
     const date     = findDate(lines);
@@ -289,7 +232,6 @@ export const handler = async (event) => {
     const header   = { customer, rep, date, invoice, zip };
     const headerIdx = findTableStart(lines);
     const items     = parseLines(lines, headerIdx);
-    // Build CSV strings
     const headerCsvRows = [
       ["Customer","Rep","Date","Invoice","Zip"],
       [
@@ -300,7 +242,7 @@ export const handler = async (event) => {
         header.zip      ?? "",
       ],
     ];
-    const headerCsv = headerCsvRows.map(r => r.map(escapeCsv).join(",")).join("\n");
+    const headerCsv = headerCsvRows.map(r => r.map(escapeCsv).join(",")).join("\\n");
     const linesCsvRows = [
       ["Activity","Description","Qty","Rate","Amount"],
       ...items.map(item => [
@@ -311,13 +253,13 @@ export const handler = async (event) => {
         item.amount != null ? String(item.amount) : "",
       ]),
     ];
-    const linesCsv = linesCsvRows.map(r => r.map(escapeCsv).join(",")).join("\n");
-    // Create the ZIP
+    const linesCsv = linesCsvRows.map(r => r.map(escapeCsv).join(",")).join("\\n");
+    // Create the ZIP archive using a unique variable name
     const archive = new JSZip();
     archive.file("invoice_header.csv", headerCsv);
     archive.file("invoice_lines.csv", linesCsv);
     const zipBuf = await archive.generateAsync({ type: "nodebuffer" });
-    // Determine a friendly ZIP name: use customer/rep/invoice when available
+    // Determine a friendly ZIP name
     const safe = (s) => (s || "").toString().replace(/[^A-Za-z0-9.-]+/g, "_");
     const parts = [safe(customer), safe(rep), safe(invoice)].filter(Boolean);
     const zipName = parts.length > 0 ? `${parts.join("_")}_extract.zip` : "invoice_extract.zip";
@@ -342,16 +284,11 @@ export const handler = async (event) => {
 // CSV utilities
 // -----------------------------------------------------------------------------
 
-/**
- * Escape a CSV cell by doubling quotes and wrapping in quotes when necessary.
- * @param {string|null} value The cell value.
- * @returns {string} Escaped CSV string.
- */
 function escapeCsv(value) {
   if (value == null) return "";
   const str = String(value);
-  if (/[,\r\n"]/.test(str)) {
-    return '"' + str.replace(/"/g, '""') + '"';
+  if (/[,\\r\\n\"]/.test(str)) {
+    return '\"' + str.replace(/\"/g, '\"\"') + '\"';
   }
   return str;
 }
