@@ -1,4 +1,4 @@
-// netlify/functions/export_csv_zip.js
+// netlify/functions/export-csv-zip.js
 //
 // Serverless function to accept a PDF invoice (base64 encoded),
 // parse it into header and line items, generate two CSV files and
