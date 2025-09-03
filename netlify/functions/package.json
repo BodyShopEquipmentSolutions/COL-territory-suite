@@ -8,3 +8,16 @@
     "pdfkit": "^0.15.0"
   }
 }
+
+{
+  "name": "col-functions",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "dependencies": {
+    "nodemailer": "^6.9.13",
+    "pdfkit": "^0.15.0",
+    "pdf-parse": "^1.1.1",
+    "jszip": "^3.10.1"
+  }
+}
