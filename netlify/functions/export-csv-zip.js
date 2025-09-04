@@ -162,7 +162,7 @@ function parseLines(lines, headerIdx) {
     if (mTail) {
       const trailStart = raw.lastIndexOf(mTail[0]);
       const left = raw.slice(0, trailStart).trim();
-      const mLeft = left.match(/^([A-Za-z0-9._\\-/]+)\\s+(.*)$/);
+      const leftPattern = /^([-A-Za-z0-9._/]+)\s+(.*)$/;
       let activity;
       let description;
       if (mLeft) {
@@ -182,7 +182,7 @@ function parseLines(lines, headerIdx) {
       continue;
     }
     if (out.length === 0) {
-      const mSeed = raw.match(/^([A-Za-z0-9._\\-/]+)\\s+(.*)$/);
+      const mSeed = raw.match(/^([-A-Za-z0-9._/]+)\s+(.*)$/;
       if (mSeed) {
         out.push({
           activity: mSeed[1].trim(),
