@@ -5,7 +5,7 @@
 // return them in a single ZIP archive. This version uses CommonJS
 // syntax and renames the ZIP instance to avoid name conflicts.
 
-const pdf = require('pdf-parse');
+const pdf = require('pdf-parse-debugging-disabled');
 const JSZip = require('jszip');
 
 // -----------------------------------------------------------------------------
