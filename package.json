@@ -9,6 +9,7 @@
     "jszip": "^3.10.1",
     "nodemailer": "^7.0.6",
     "pdf-parse": "^1.1.1",
+    "pdf-parse-debugging-disabled": "^1.1.1",
     "pdfkit": "^0.17.2",
     "tesseract.js": "^4.1.4",
     "xlsx": "^0.18.5"
