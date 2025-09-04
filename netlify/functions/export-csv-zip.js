@@ -18,8 +18,8 @@ const usStates = [
   "RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"
 ];
 const STATE_RE = new RegExp(`\\b(?:${usStates.join("|")})\\b`);
-const MONEY_RE = String.raw`-?\\$?\\d{1,3}(?:,\\d{3})*(?:\\.\\d{2})?|-?\\$?\\d+(?:\\.\\d{2})?`;
-const QTY_RE   = String.raw`\\d+(?:\\.\\d+)?`;
+const MONEY_RE = String.raw`-?\$?\d{1,3}(?:,\d{3})*(?:\.\d{2})?|-?\$?\d+(?:\.\d{2})?`;
+const QTY_RE   = String.raw`\d+(?:\.\d+)?`;
 
 // -----------------------------------------------------------------------------
 // Utility functions for cleaning and parsing text
@@ -27,21 +27,21 @@ const QTY_RE   = String.raw`\\d+(?:\\.\\d+)?`;
 
 function cleanLines(text) {
   return text
-    .replace(/\\r/g, "")
-    .split("\\n")
-    .map(l => l.replace(/\\u00A0/g, " ").replace(/\\s+$/g, "").replace(/^\\s+/g, ""))
+    .replace(/\r/g, "")
+    .split("\n")
+    .map(l => l.replace(/\u00A0/g, " ").replace(/\s+$/g, "").replace(/^\s+/g, ""))
     .filter(l => l.length > 0);
 }
 
 function unmoney(s) {
   if (s == null) return null;
-  const v = String(s).replace(/\\$/g, "").replace(/,/g, "").trim();
+  const v = String(s).replace(/\$/g, "").replace(/,/g, "").trim();
   return v === "" ? null : Number(v);
 }
 
 function parseDate(raw) {
   if (!raw) return null;
-  const m = raw.match(/(\\d{1,2})[\\/\\-](\\d{1,2})[\\/\\-](\\d{2,4})/);
+  const m = raw.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
   if (!m) return null;
   let [ , mm, dd, yyyy ] = m;
   if (yyyy.length === 2) {
@@ -55,8 +55,8 @@ function parseDate(raw) {
 
 function findCustomer(lines) {
   const custMarkers = [
-    /^(?:Customer|Bill To|Sold To)\\s*:\\s*(.+)$/i,
-    /^(?:Customer|Bill To|Sold To)\\s+(.+)$/i,
+    /^(?:Customer|Bill To|Sold To)\s*:\s*(.+)$/i,
+    /^(?:Customer|Bill To|Sold To)\s+(.+)$/i,
   ];
   for (const l of lines.slice(0, 40)) {
     for (const re of custMarkers) {
@@ -68,7 +68,7 @@ function findCustomer(lines) {
   if (idx >= 0) {
     for (let i = idx + 1; i < Math.min(idx + 5, lines.length); i++) {
       const t = lines[i];
-      if (!/^(Address|Phone|Email|Fax|Attn|City|State|Zip)[:\\s]/i.test(t) && t.length > 3) {
+      if (!/^(Address|Phone|Email|Fax|Attn|City|State|Zip)[:\s]/i.test(t) && t.length > 3) {
         return t.trim();
       }
     }
@@ -77,33 +77,33 @@ function findCustomer(lines) {
 }
 
 function findInvoice(lines) {
-  const re = /(?:Invoice\\s*(?:#|No\\.?|Number)?\\s*[:\\-]?\\s*)([A-Z0-9\\-]+)/i;
+  const re = /(?:Invoice\s*(?:#|No\.?|Number)?\s*[:\-]?\s*)([A-Z0-9\-]+)/i;
   for (const l of lines.slice(0, 80)) {
     const m = l.match(re);
     if (m) return m[1].trim();
   }
   for (const l of lines.slice(0, 80)) {
-    const m = l.match(/\\bINVOICE\\s+([A-Z0-9\\-]+)/i);
+    const m = l.match(/\bINVOICE\s+([A-Z0-9\-]+)/i);
     if (m) return m[1].trim();
   }
   return null;
 }
 
 function findDate(lines) {
-  const re = /(?:Invoice\\s*Date|Date)\\s*[:\\-]?\\s*(\\d{1,2}[\\/\\-]\\d{1,2}[\\/\\-]\\d{2,4})/i;
+  const re = /(?:Invoice\s*Date|Date)\s*[:\-]?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i;
   for (const l of lines.slice(0, 80)) {
     const m = l.match(re);
     if (m) return parseDate(m[1]);
   }
   for (const l of lines.slice(0, 50)) {
-    const m = l.match(/(\\d{1,2}[\\/\\-]\\d{1,2}[\\/\\-]\\d{2,4})/);
+    const m = l.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/);
     if (m) return parseDate(m[1]);
   }
   return null;
 }
 
 function findRep(lines) {
-  const re = /(?:Sales\\s*Rep|Salesperson|Sold\\s*By|Rep)\\s*[:\\-]?\\s*([A-Za-z .,'-]+)(?:\\s{2,}|$)/i;
+  const re = /(?:Sales\s*Rep|Salesperson|Sold\s*By|Rep)\s*[:\-]?\s*([A-Za-z .,'-]+)(?:\s{2,}|$)/i;
   for (const l of lines.slice(0, 120)) {
     const m = l.match(re);
     if (m) return m[1].trim();
@@ -112,7 +112,7 @@ function findRep(lines) {
 }
 
 function findZip(lines) {
-  const zipRe = /\\b(\\d{5}(?:-\\d{4})?)\\b/;
+  const zipRe = /\b(\d{5}(?:-\d{4})?)\b/;
   for (const l of lines.slice(0, 50)) {
     if (STATE_RE.test(l) && zipRe.test(l)) {
       const m = l.match(zipRe);
@@ -129,9 +129,9 @@ function findZip(lines) {
 function findTableStart(lines) {
   const headerRe = /ACTIVITY/i;
   const descRe   = /DESCRIPTION/i;
-  const qtyRe    = /\\bQTY\\b|\\bQUANTITY\\b/i;
-  const rateRe   = /\\bRATE\\b|\\bPRICE\\b/i;
-  const amtRe    = /\\bAMOUNT\\b|\\bEXT\\.?\\b|\\bTOTAL\\b/i;
+  const qtyRe    = /\bQTY\b|\bQUANTITY\b/i;
+  const rateRe   = /\bRATE\b|\bPRICE\b/i;
+  const amtRe    = /\bAMOUNT\b|\bEXT\.?\b|\bTOTAL\b/i;
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i];
     if (headerRe.test(l) && descRe.test(l) && qtyRe.test(l) && rateRe.test(l) && amtRe.test(l)) {
@@ -142,9 +142,9 @@ function findTableStart(lines) {
 }
 
 function shouldStopRow(line) {
-  return /^(Subtotal|Sub\\-Total|Tax|Sales Tax|Total|Balance Due)\\b/i.test(line) ||
-         /^INVOICE\\b/i.test(line) ||
-         /^Page \\d+/i.test(line);
+  return /^(Subtotal|Sub\-Total|Tax|Sales Tax|Total|Balance Due)\b/i.test(line) ||
+         /^INVOICE\b/i.test(line) ||
+         /^Page \d+/i.test(line);
 }
 
 function parseLines(lines, headerIdx) {
@@ -152,7 +152,7 @@ function parseLines(lines, headerIdx) {
   const start = headerIdx + 1;
   const out = [];
   const tailRe = new RegExp(
-    String.raw`(${QTY_RE})\\s+(${MONEY_RE})\\s+(${MONEY_RE})$`
+    String.raw`(${QTY_RE})\s+(${MONEY_RE})\s+(${MONEY_RE})$`
   );
   for (let i = start; i < lines.length; i++) {
     const raw = lines[i];
@@ -162,7 +162,9 @@ function parseLines(lines, headerIdx) {
     if (mTail) {
       const trailStart = raw.lastIndexOf(mTail[0]);
       const left = raw.slice(0, trailStart).trim();
-      const leftPattern = /^([-A-Za-z0-9._/]+)\s+(.*)$/;
+      // Match the left-hand side (activity + description) with a safe character class.
+      // Hyphen is placed at the start of the character class to avoid range errors.
+      const mLeft = left.match(/^([-A-Za-z0-9._/]+)\s+(.*)$/);
       let activity;
       let description;
       if (mLeft) {
@@ -182,7 +184,7 @@ function parseLines(lines, headerIdx) {
       continue;
     }
     if (out.length === 0) {
-      const mSeed = raw.match(/^([-A-Za-z0-9._/]+)\s+(.*)$/;
+      const mSeed = raw.match(/^([-A-Za-z0-9._/]+)\s+(.*)$/);
       if (mSeed) {
         out.push({
           activity: mSeed[1].trim(),
@@ -242,7 +244,7 @@ exports.handler = async function (event) {
         header.zip      ?? "",
       ],
     ];
-    const headerCsv = headerCsvRows.map(r => r.map(escapeCsv).join(",")).join("\\n");
+    const headerCsv = headerCsvRows.map(r => r.map(escapeCsv).join(",")).join("\n");
     const linesCsvRows = [
       ["Activity","Description","Qty","Rate","Amount"],
       ...items.map(item => [
@@ -253,7 +255,7 @@ exports.handler = async function (event) {
         item.amount != null ? String(item.amount) : "",
       ]),
     ];
-    const linesCsv = linesCsvRows.map(r => r.map(escapeCsv).join(",")).join("\\n");
+    const linesCsv = linesCsvRows.map(r => r.map(escapeCsv).join(",")).join("\n");
     // Create the ZIP archive using a unique variable name
     const archive = new JSZip();
     archive.file("invoice_header.csv", headerCsv);
@@ -287,8 +289,9 @@ exports.handler = async function (event) {
 function escapeCsv(value) {
   if (value == null) return "";
   const str = String(value);
-  if (/[,\\r\\n\"]/.test(str)) {
-    return '\"' + str.replace(/\"/g, '\"\"') + '\"';
+  if (/[,\\r\\n"]/.test(str)) {
+    return '"' + str.replace(/"/g, '""') + '"';
   }
   return str;
 }
+
