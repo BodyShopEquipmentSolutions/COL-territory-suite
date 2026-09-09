@@ -168,6 +168,19 @@ th,td{padding:10px;border-bottom:1px solid var(--stroke);text-align:left;vertica
         <input id="rememberSender" type="checkbox" style="width:auto"> Remember me on this device
       </label>
     </div>
+
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--stroke)">
+      <label for="orderedBy" style="margin-top:0">Who ordered the parts</label>
+      <input id="orderedBy" type="text" placeholder="Name of person who ordered">
+
+      <label for="recipientMessage" style="margin-top:10px">Message to recipient</label>
+      <textarea id="recipientMessage" rows="5" placeholder="Optional note to include in the email body…" style="resize:vertical"></textarea>
+
+      <div style="margin-top:10px;font-size:12px;opacity:.85">
+        The following will auto-fill from the form above and be appended to the email:
+      </div>
+      <div id="contactPreview" style="margin-top:6px;padding:10px;border-radius:10px;background:rgba(0,0,0,.25);border:1px solid var(--stroke);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;white-space:pre-wrap;line-height:1.5">—</div>
+    </div>
   </div>
 </div>
 
@@ -527,6 +540,8 @@ document.querySelector('#sendQuote').addEventListener('click', async () => {
     to: (document.querySelector('input[name="to"]:checked')||{}).value || 'Service@car-o-linersw.com',
     cc: ($('#ccEmails').value || '').split(/[,;\s]+/).map(s=>s.trim()).filter(Boolean),
     senderEmail: ($('#senderEmail').value || '').trim(),
+    orderedBy: ($('#orderedBy').value || '').trim(),
+    message:   ($('#recipientMessage').value || '').trim(),
     cart: cart,
     totals: {
       subtotal: $('#subtotal').textContent,
@@ -560,6 +575,32 @@ document.querySelector('#sendQuote').addEventListener('click', async () => {
     btn.textContent = old;
   }
 });
+
+/* ------------------- Live contact preview under Message ------------------- */
+(function(){
+  const preview = document.getElementById('contactPreview');
+  if (!preview) return;
+  const fields = ['orderedBy','address','city','state','zip','phone','email'];
+  function render(){
+    const orderedBy = ($('#orderedBy').value || '').trim();
+    const addr1 = ($('#address').value || '').trim();
+    const csz   = [$('#city').value, $('#state').value, $('#zip').value].map(s=>(s||'').trim()).filter(Boolean).join(', ').replace(', ,',',');
+    const phone = ($('#phone').value || '').trim();
+    const email = ($('#email').value || '').trim();
+    const lines = [
+      'Ordered by:    ' + (orderedBy || '(fill in above)'),
+      'Address:       ' + [addr1, csz].filter(Boolean).join(' — '),
+      'Phone number:  ' + (phone || ''),
+      'Email address: ' + (email || ''),
+    ];
+    preview.textContent = lines.join('\n');
+  }
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', render);
+  });
+  render();
+})();
 
 /* ------------------- Remembered sender email + CC list ------------------- */
 (function(){

@@ -175,19 +175,32 @@ export const handler = async (event) => {
     const senderEmail = data.senderEmail || data.email || SMTP_USER;
     const senderName  = data.rep || SMTP_FROM_NAME || 'Car-O-Liner Southwest';
     const subject     = `Service Request – ${data.customer || 'Customer'} – ${data.date || ''}`.trim();
+
+    const csz = [data.city, data.state, data.zip].filter(Boolean).join(', ').replace(', ,', ',');
+    const addressLine = [data.address, csz].filter(Boolean).join(' — ');
+
     const bodyLines = [
       `New service request submitted via the COL Southwest app.`,
       ``,
-      `Customer: ${data.customer || ''}`,
-      `Contact:  ${data.contact || ''}`,
-      `Phone:    ${data.phone || ''}`,
-      `Email:    ${data.email || ''}`,
-      `Rep:      ${data.rep || ''}`,
-      ``,
-      `Total:    ${(data.totals && data.totals.grand) || ''}`,
-      ``,
-      `Notes: ${data.notes || '(none)'}`,
-    ].join('\n');
+    ];
+    if (data.message) {
+      bodyLines.push('Message from ' + (data.rep || 'the rep') + ':');
+      bodyLines.push(data.message);
+      bodyLines.push('');
+    }
+    bodyLines.push('Ordered by:    ' + (data.orderedBy || ''));
+    bodyLines.push('Address:       ' + addressLine);
+    bodyLines.push('Phone number:  ' + (data.phone || ''));
+    bodyLines.push('Email address: ' + (data.email || ''));
+    bodyLines.push('');
+    bodyLines.push('Customer: ' + (data.customer || ''));
+    bodyLines.push('Contact:  ' + (data.contact || ''));
+    bodyLines.push('Rep:      ' + (data.rep || ''));
+    bodyLines.push('');
+    bodyLines.push('Total:    ' + ((data.totals && data.totals.grand) || ''));
+    bodyLines.push('');
+    bodyLines.push('Notes: ' + (data.notes || '(none)'));
+    const bodyText = bodyLines.join('\n');
 
     await transporter.sendMail({
       from: `"${senderName}" <${SMTP_USER}>`,   // must match authenticated user
@@ -195,7 +208,7 @@ export const handler = async (event) => {
       to,
       cc: ccList.length ? ccList : undefined,
       subject,
-      text: bodyLines,
+      text: bodyText,
       attachments: [{
         filename: `Quote-${(data.customer || 'customer').replace(/[^A-Za-z0-9]+/g, '_')}.pdf`,
         content: pdfBuffer,
