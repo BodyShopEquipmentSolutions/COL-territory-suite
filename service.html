@@ -153,6 +153,14 @@ th,td{padding:10px;border-bottom:1px solid var(--stroke);text-align:left;vertica
     <label><input type="radio" name="to" value="Cguel@Car-O-Linersw.com"> Cguel@Car-O-Linersw.com</label>
     <label><input type="radio" name="to" value="Systemorders@Car-O-Linersw.com"> Systemorders@Car-O-Linersw.com</label>
     <label><input type="radio" name="to" value="Bodyshop.e.s@gmail.com"> Bodyshop.e.s@gmail.com</label>
+
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--stroke)">
+      <label for="senderEmail" style="margin-top:0">Your email (replies come back to you)</label>
+      <input id="senderEmail" type="email" autocomplete="email" placeholder="you@example.com">
+      <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;opacity:.9">
+        <input id="rememberSender" type="checkbox" style="width:auto"> Remember me on this device
+      </label>
+    </div>
   </div>
 </div>
 
@@ -510,7 +518,7 @@ document.querySelector('#sendQuote').addEventListener('click', async () => {
     date: $('#date').value,
     notes: $('#overallNotes').value,
     to: (document.querySelector('input[name="to"]:checked')||{}).value || 'Bodyshop.e.s@gmail.com',
-    senderEmail: (localStorage.getItem('colsw_sender_email') || $('#email').value || ''),
+    senderEmail: ($('#senderEmail').value || '').trim(),
     cart: cart,
     totals: {
       subtotal: $('#subtotal').textContent,
@@ -544,6 +552,25 @@ document.querySelector('#sendQuote').addEventListener('click', async () => {
     btn.textContent = old;
   }
 });
+
+/* ------------------- Remembered sender email ------------------- */
+(function(){
+  const emailEl = document.getElementById('senderEmail');
+  const remEl   = document.getElementById('rememberSender');
+  if (!emailEl || !remEl) return;
+  const saved = localStorage.getItem('colsw_sender_email') || '';
+  if (saved) { emailEl.value = saved; remEl.checked = true; }
+  const persist = () => {
+    if (remEl.checked && emailEl.value.trim()) {
+      localStorage.setItem('colsw_sender_email', emailEl.value.trim());
+    } else if (!remEl.checked) {
+      localStorage.removeItem('colsw_sender_email');
+    }
+  };
+  emailEl.addEventListener('change', persist);
+  emailEl.addEventListener('blur', persist);
+  remEl.addEventListener('change', persist);
+})();
 
 /* ------------------- boot ------------------- */
 (async()=>{

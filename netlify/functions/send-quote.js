@@ -134,6 +134,9 @@ export const handler = async (event) => {
   const to = data.to;
   if (!to)               return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'Missing recipient (to)' }) };
   if (!(data.cart || []).length) return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'Cart is empty' }) };
+  if (!data.senderEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.senderEmail)) {
+    return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'Please enter your email in the Send To section so replies come back to you.' }) };
+  }
 
   const {
     SMTP_HOST, SMTP_PORT, SMTP_SECURE,
