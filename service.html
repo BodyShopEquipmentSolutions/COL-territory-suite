@@ -149,10 +149,17 @@ th,td{padding:10px;border-bottom:1px solid var(--stroke);text-align:left;vertica
   <!-- Send To -->
   <div class="card" style="padding:16px;margin-top:16px">
     <h2 style="margin-top:0">Send To</h2>
-    <label><input type="radio" name="to" value="service@Car-O-Linersw.com" checked> service@Car-O-Linersw.com</label>
-    <label><input type="radio" name="to" value="Cguel@Car-O-Linersw.com"> Cguel@Car-O-Linersw.com</label>
-    <label><input type="radio" name="to" value="Systemorders@Car-O-Linersw.com"> Systemorders@Car-O-Linersw.com</label>
-    <label><input type="radio" name="to" value="Bodyshop.e.s@gmail.com"> Bodyshop.e.s@gmail.com</label>
+    <label><input type="radio" name="to" value="Service@car-o-linersw.com" checked> Service@car-o-linersw.com</label>
+    <label><input type="radio" name="to" value="Salesorders@car-o-linersw.com"> Salesorders@car-o-linersw.com</label>
+    <label><input type="radio" name="to" value="Systemorders@car-o-linersw.com"> Systemorders@car-o-linersw.com</label>
+
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--stroke)">
+      <label for="ccEmails" style="margin-top:0">CC (optional) — separate multiple emails with commas</label>
+      <input id="ccEmails" type="text" autocomplete="off" placeholder="person1@example.com, person2@example.com">
+      <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;opacity:.9">
+        <input id="rememberCc" type="checkbox" style="width:auto"> Remember these CCs on this device
+      </label>
+    </div>
 
     <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--stroke)">
       <label for="senderEmail" style="margin-top:0">Your email (replies come back to you)</label>
@@ -517,7 +524,8 @@ document.querySelector('#sendQuote').addEventListener('click', async () => {
     region: $('#region').value,
     date: $('#date').value,
     notes: $('#overallNotes').value,
-    to: (document.querySelector('input[name="to"]:checked')||{}).value || 'Bodyshop.e.s@gmail.com',
+    to: (document.querySelector('input[name="to"]:checked')||{}).value || 'Service@car-o-linersw.com',
+    cc: ($('#ccEmails').value || '').split(/[,;\s]+/).map(s=>s.trim()).filter(Boolean),
     senderEmail: ($('#senderEmail').value || '').trim(),
     cart: cart,
     totals: {
@@ -553,23 +561,41 @@ document.querySelector('#sendQuote').addEventListener('click', async () => {
   }
 });
 
-/* ------------------- Remembered sender email ------------------- */
+/* ------------------- Remembered sender email + CC list ------------------- */
 (function(){
   const emailEl = document.getElementById('senderEmail');
   const remEl   = document.getElementById('rememberSender');
-  if (!emailEl || !remEl) return;
-  const saved = localStorage.getItem('colsw_sender_email') || '';
-  if (saved) { emailEl.value = saved; remEl.checked = true; }
-  const persist = () => {
-    if (remEl.checked && emailEl.value.trim()) {
-      localStorage.setItem('colsw_sender_email', emailEl.value.trim());
-    } else if (!remEl.checked) {
-      localStorage.removeItem('colsw_sender_email');
-    }
-  };
-  emailEl.addEventListener('change', persist);
-  emailEl.addEventListener('blur', persist);
-  remEl.addEventListener('change', persist);
+  if (emailEl && remEl) {
+    const saved = localStorage.getItem('colsw_sender_email') || '';
+    if (saved) { emailEl.value = saved; remEl.checked = true; }
+    const persist = () => {
+      if (remEl.checked && emailEl.value.trim()) {
+        localStorage.setItem('colsw_sender_email', emailEl.value.trim());
+      } else if (!remEl.checked) {
+        localStorage.removeItem('colsw_sender_email');
+      }
+    };
+    emailEl.addEventListener('change', persist);
+    emailEl.addEventListener('blur', persist);
+    remEl.addEventListener('change', persist);
+  }
+
+  const ccEl  = document.getElementById('ccEmails');
+  const remCc = document.getElementById('rememberCc');
+  if (ccEl && remCc) {
+    const savedCc = localStorage.getItem('colsw_cc_emails') || '';
+    if (savedCc) { ccEl.value = savedCc; remCc.checked = true; }
+    const persistCc = () => {
+      if (remCc.checked && ccEl.value.trim()) {
+        localStorage.setItem('colsw_cc_emails', ccEl.value.trim());
+      } else if (!remCc.checked) {
+        localStorage.removeItem('colsw_cc_emails');
+      }
+    };
+    ccEl.addEventListener('change', persistCc);
+    ccEl.addEventListener('blur', persistCc);
+    remCc.addEventListener('change', persistCc);
+  }
 })();
 
 /* ------------------- boot ------------------- */

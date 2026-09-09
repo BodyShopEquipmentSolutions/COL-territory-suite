@@ -134,8 +134,19 @@ export const handler = async (event) => {
   const to = data.to;
   if (!to)               return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'Missing recipient (to)' }) };
   if (!(data.cart || []).length) return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'Cart is empty' }) };
-  if (!data.senderEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.senderEmail)) {
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!data.senderEmail || !EMAIL_RE.test(data.senderEmail)) {
     return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'Please enter your email in the Send To section so replies come back to you.' }) };
+  }
+
+  // Normalize CC: accept array or comma/semicolon/whitespace-separated string, validate each.
+  let ccList = [];
+  if (Array.isArray(data.cc)) ccList = data.cc;
+  else if (typeof data.cc === 'string') ccList = data.cc.split(/[,;\s]+/);
+  ccList = ccList.map(s => String(s).trim()).filter(Boolean);
+  const badCc = ccList.filter(e => !EMAIL_RE.test(e));
+  if (badCc.length) {
+    return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'Invalid CC email(s): ' + badCc.join(', ') }) };
   }
 
   const {
@@ -182,6 +193,7 @@ export const handler = async (event) => {
       from: `"${senderName}" <${SMTP_USER}>`,   // must match authenticated user
       replyTo: senderEmail,                     // replies go to the actual sender
       to,
+      cc: ccList.length ? ccList : undefined,
       subject,
       text: bodyLines,
       attachments: [{
