@@ -4,9 +4,3 @@
 
 [functions]
   node_bundler = "esbuild"
-
-# pdfkit ships its standard-14 font metrics as .afm files inside the package.
-# esbuild doesn't include non-JS assets, so tell Netlify to copy them into the
-# function bundle so pdfkit can find them at runtime.
-[functions."send-quote"]
-  included_files = ["node_modules/pdfkit/js/data/*.afm"]

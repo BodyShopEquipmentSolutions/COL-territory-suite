@@ -1,121 +1,215 @@
 // netlify/functions/send-quote.js
 // ESM (package.json has "type": "module").
 // Sends the quote as a PDF attachment via SMTP.
-// One shared SMTP mailbox authenticates the send; each user's email is set as Reply-To
-// so replies land in the sender's inbox, not the shared mailbox.
+// Uses pdf-lib (Standard-14 fonts embedded, no external file assets — works
+// cleanly in esbuild-bundled Netlify Functions where pdfkit's .afm files fail
+// to resolve at runtime).
 //
 // Required Netlify environment variables:
 //   SMTP_HOST       e.g. smtp.gmail.com
 //   SMTP_PORT       e.g. 465
 //   SMTP_SECURE     "true" for port 465, "false" for 587
-//   SMTP_USER       e.g. bodyshop.e.s@gmail.com  (the shared authenticated mailbox)
-//   SMTP_PASS       Gmail App Password (16 chars, no spaces)
-//   SMTP_FROM_NAME  optional display name, defaults to "Car-O-Liner Southwest"
+//   SMTP_USER       shared authenticated mailbox (e.g. noreply.colsw@gmail.com)
+//   SMTP_PASS       Gmail App Password (16 chars)
+//   SMTP_FROM_NAME  optional display name
 
 import nodemailer from 'nodemailer';
-import PDFDocument from 'pdfkit';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
 const money = (n) => `$${(Number(n) || 0).toFixed(2)}`;
 
-function buildPdf(data) {
-  return new Promise((resolve, reject) => {
-    try {
-      const doc = new PDFDocument({ size: 'LETTER', margin: 50 });
-      const chunks = [];
-      doc.on('data', (c) => chunks.push(c));
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-      doc.on('error', reject);
+// LETTER: 612 x 792 pts. Margins & column widths in pts.
+const PAGE_W = 612;
+const PAGE_H = 792;
+const MARGIN_L = 50;
+const MARGIN_R = 50;
+const MARGIN_T = 50;
+const MARGIN_B = 60;
+const CONTENT_W = PAGE_W - MARGIN_L - MARGIN_R;
 
-      // Header
-      doc.fontSize(22).text('SERVICE REQUEST / QUOTE', { align: 'left' });
-      doc.moveDown(0.3);
-      doc.fontSize(10)
-        .text('Car-O-Liner Southwest', { align: 'left' })
-        .text('2805 Singleton St, Rowlett, TX 75088')
-        .text('T: (972) 412-5147   F: (972) 412-5287');
-      doc.moveDown(0.5);
-      doc.fontSize(10).text(`Date: ${data.date || ''}`, { align: 'right' });
-      doc.text(`Rep: ${data.rep || ''}`, { align: 'right' });
-      doc.moveDown();
-
-      // Customer
-      doc.fontSize(12).text('Sold To:', { underline: true });
-      doc.fontSize(11)
-        .text(data.customer || '')
-        .text(data.contact || '')
-        .text(data.address || '')
-        .text([data.city, data.state, data.zip].filter(Boolean).join(', '))
-        .text(`Phone: ${data.phone || ''}`)
-        .text(`Email: ${data.email || ''}`);
-      doc.moveDown();
-
-      if (data.notes) {
-        doc.fontSize(12).text('Notes:', { underline: true });
-        doc.fontSize(10).text(data.notes);
-        doc.moveDown();
+function wrap(text, font, size, maxWidth) {
+  const words = String(text || '').split(/\s+/);
+  const lines = [];
+  let line = '';
+  for (const w of words) {
+    const trial = line ? line + ' ' + w : w;
+    if (font.widthOfTextAtSize(trial, size) <= maxWidth) {
+      line = trial;
+    } else {
+      if (line) lines.push(line);
+      // very-long single word: hard-break
+      if (font.widthOfTextAtSize(w, size) > maxWidth) {
+        let chunk = '';
+        for (const ch of w) {
+          if (font.widthOfTextAtSize(chunk + ch, size) > maxWidth) {
+            lines.push(chunk);
+            chunk = ch;
+          } else {
+            chunk += ch;
+          }
+        }
+        line = chunk;
+      } else {
+        line = w;
       }
-
-      // Items table
-      doc.fontSize(12).text('Items:', { underline: true });
-      doc.moveDown(0.3);
-      doc.fontSize(10);
-      const startX = doc.x;
-      const cols = [
-        { label: '#', w: 25 },
-        { label: 'Item',  w: 90 },
-        { label: 'Description', w: 200 },
-        { label: 'Qty', w: 35 },
-        { label: 'Price', w: 60 },
-        { label: 'Total', w: 60 },
-      ];
-      let y = doc.y;
-      // header
-      let x = startX;
-      doc.font('Helvetica-Bold');
-      cols.forEach(c => { doc.text(c.label, x, y, { width: c.w }); x += c.w; });
-      doc.font('Helvetica');
-      y += 16;
-      doc.moveTo(startX, y - 4).lineTo(startX + cols.reduce((a, c) => a + c.w, 0), y - 4).stroke();
-
-      let subtotal = 0;
-      (data.cart || []).forEach((it, i) => {
-        const qty = Number(it.qty) || 0;
-        const price = Number(it.price) || 0;
-        const line = qty * price;
-        subtotal += line;
-        x = startX;
-        const row = [
-          String(i + 1),
-          it.num || it.item || '',
-          `${it.desc || ''}${it.type ? ' — ' + it.type : ''}${it.rr === 'Repair' ? ' (REPAIR)' : ''}${it.notes ? ' — ' + it.notes : ''}`,
-          String(qty),
-          money(price),
-          money(line),
-        ];
-        // measure the description height for row height
-        const descHeight = doc.heightOfString(row[2], { width: cols[2].w });
-        const rowH = Math.max(14, descHeight + 4);
-        row.forEach((cell, ci) => {
-          doc.text(cell, x, y, { width: cols[ci].w });
-          x += cols[ci].w;
-        });
-        y += rowH;
-        if (y > 720) { doc.addPage(); y = 50; }
-        doc.y = y;
-      });
-
-      doc.moveDown();
-      const totals = data.totals || {};
-      doc.fontSize(11).text(`Subtotal: ${totals.subtotal || money(subtotal)}`, { align: 'right' });
-      if (totals.tax)     doc.text(`Tax: ${totals.tax}`,     { align: 'right' });
-      if (totals.freight) doc.text(`Freight: ${totals.freight}`, { align: 'right' });
-      doc.font('Helvetica-Bold').text(`Total: ${totals.grand || money(subtotal)}`, { align: 'right' });
-
-      doc.end();
-    } catch (e) {
-      reject(e);
     }
+  }
+  if (line) lines.push(line);
+  return lines.length ? lines : [''];
+}
+
+async function buildPdf(data) {
+  const pdf = await PDFDocument.create();
+  const helv     = await pdf.embedFont(StandardFonts.Helvetica);
+  const helvBold = await pdf.embedFont(StandardFonts.HelveticaBold);
+
+  let page = pdf.addPage([PAGE_W, PAGE_H]);
+  let y = PAGE_H - MARGIN_T;
+
+  const ensureRoom = (h) => {
+    if (y - h < MARGIN_B) {
+      page = pdf.addPage([PAGE_W, PAGE_H]);
+      y = PAGE_H - MARGIN_T;
+    }
+  };
+
+  const draw = (text, opts = {}) => {
+    const font = opts.bold ? helvBold : helv;
+    const size = opts.size || 10;
+    const align = opts.align || 'left';
+    const width = opts.width || CONTENT_W;
+    const x0 = opts.x != null ? opts.x : MARGIN_L;
+    const color = opts.color || rgb(0, 0, 0);
+    const lines = wrap(text, font, size, width);
+    const lineH = size + 3;
+    for (const ln of lines) {
+      ensureRoom(lineH);
+      let x = x0;
+      if (align === 'right') {
+        const w = font.widthOfTextAtSize(ln, size);
+        x = x0 + width - w;
+      } else if (align === 'center') {
+        const w = font.widthOfTextAtSize(ln, size);
+        x = x0 + (width - w) / 2;
+      }
+      page.drawText(ln, { x, y: y - size, size, font, color });
+      y -= lineH;
+    }
+    return lines.length * lineH;
+  };
+
+  const spacer = (h) => { ensureRoom(h); y -= h; };
+  const rule = () => {
+    ensureRoom(2);
+    page.drawLine({
+      start: { x: MARGIN_L, y },
+      end:   { x: MARGIN_L + CONTENT_W, y },
+      thickness: 0.5,
+      color: rgb(0.5, 0.5, 0.5),
+    });
+    y -= 4;
+  };
+
+  // Header
+  draw('SERVICE REQUEST / QUOTE', { size: 22, bold: true });
+  spacer(4);
+  draw('Car-O-Liner Southwest', { size: 10 });
+  draw('2805 Singleton St, Rowlett, TX 75088', { size: 10 });
+  draw('T: (972) 412-5147   F: (972) 412-5287', { size: 10 });
+  spacer(4);
+  draw(`Date: ${data.date || ''}`, { size: 10, align: 'right' });
+  draw(`Rep: ${data.rep || ''}`, { size: 10, align: 'right' });
+  spacer(8);
+
+  // Customer
+  draw('Sold To:', { size: 12, bold: true });
+  rule();
+  draw(data.customer || '', { size: 11 });
+  if (data.contact) draw(data.contact, { size: 11 });
+  if (data.address) draw(data.address, { size: 11 });
+  const csz = [data.city, data.state, data.zip].filter(Boolean).join(', ');
+  if (csz) draw(csz, { size: 11 });
+  if (data.phone) draw(`Phone: ${data.phone}`, { size: 11 });
+  if (data.email) draw(`Email: ${data.email}`, { size: 11 });
+  spacer(8);
+
+  if (data.notes) {
+    draw('Notes:', { size: 12, bold: true });
+    rule();
+    draw(data.notes, { size: 10 });
+    spacer(8);
+  }
+
+  // Items
+  draw('Items:', { size: 12, bold: true });
+  rule();
+
+  const cols = [
+    { key: 'n',     label: '#',           w: 25  },
+    { key: 'item',  label: 'Item',        w: 85  },
+    { key: 'desc',  label: 'Description', w: 200 },
+    { key: 'qty',   label: 'Qty',         w: 30, align: 'right' },
+    { key: 'price', label: 'Price',       w: 60, align: 'right' },
+    { key: 'total', label: 'Total',       w: 60, align: 'right' },
+  ];
+  const colX = [];
+  {
+    let cx = MARGIN_L;
+    for (const c of cols) { colX.push(cx); cx += c.w; }
+  }
+
+  const drawRow = (cells, opts = {}) => {
+    const size = opts.size || 10;
+    const font = opts.bold ? helvBold : helv;
+    // measure row height using the wider column heights
+    let rowH = size + 3;
+    const cellLines = cells.map((cell, i) => wrap(String(cell ?? ''), font, size, cols[i].w - 4));
+    for (const lines of cellLines) rowH = Math.max(rowH, lines.length * (size + 3));
+    ensureRoom(rowH);
+    for (let i = 0; i < cells.length; i++) {
+      const lines = cellLines[i];
+      let ly = y;
+      for (const ln of lines) {
+        let x = colX[i] + 2;
+        const w = font.widthOfTextAtSize(ln, size);
+        if (cols[i].align === 'right') x = colX[i] + cols[i].w - w - 2;
+        page.drawText(ln, { x, y: ly - size, size, font });
+        ly -= (size + 3);
+      }
+    }
+    y -= rowH;
+  };
+
+  // Header row
+  drawRow(cols.map(c => c.label), { bold: true, size: 10 });
+  rule();
+
+  let subtotal = 0;
+  (data.cart || []).forEach((it, i) => {
+    const qty   = Number(it.qty) || 0;
+    const price = Number(it.price) || 0;
+    const line  = qty * price;
+    subtotal   += line;
+    const desc  = `${it.desc || ''}${it.type ? ' — ' + it.type : ''}${it.rr === 'Repair' ? ' (REPAIR)' : ''}${it.notes ? ' — ' + it.notes : ''}`;
+    drawRow([
+      String(i + 1),
+      it.num || it.item || '',
+      desc,
+      String(qty),
+      money(price),
+      money(line),
+    ]);
   });
+
+  spacer(8);
+  const totals = data.totals || {};
+  draw(`Subtotal: ${totals.subtotal || money(subtotal)}`, { size: 11, align: 'right' });
+  if (totals.tax)     draw(`Tax: ${totals.tax}`,         { size: 11, align: 'right' });
+  if (totals.freight) draw(`Freight: ${totals.freight}`, { size: 11, align: 'right' });
+  draw(`Total: ${totals.grand || money(subtotal)}`, { size: 12, bold: true, align: 'right' });
+
+  const bytes = await pdf.save();
+  return Buffer.from(bytes);
 }
 
 export const handler = async (event) => {
@@ -139,7 +233,6 @@ export const handler = async (event) => {
     return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'Please enter your email in the Send To section so replies come back to you.' }) };
   }
 
-  // Normalize CC: accept array or comma/semicolon/whitespace-separated string, validate each.
   let ccList = [];
   if (Array.isArray(data.cc)) ccList = data.cc;
   else if (typeof data.cc === 'string') ccList = data.cc.split(/[,;\s]+/);
@@ -203,8 +296,8 @@ export const handler = async (event) => {
     const bodyText = bodyLines.join('\n');
 
     await transporter.sendMail({
-      from: `"${senderName}" <${SMTP_USER}>`,   // must match authenticated user
-      replyTo: senderEmail,                     // replies go to the actual sender
+      from: `"${senderName}" <${SMTP_USER}>`,
+      replyTo: senderEmail,
       to,
       cc: ccList.length ? ccList : undefined,
       subject,
