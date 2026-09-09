@@ -149,9 +149,15 @@ th,td{padding:10px;border-bottom:1px solid var(--stroke);text-align:left;vertica
   <!-- Send To -->
   <div class="card" style="padding:16px;margin-top:16px">
     <h2 style="margin-top:0">Send To</h2>
-    <label><input type="radio" name="to" value="Service@car-o-linersw.com" checked> Service@car-o-linersw.com</label>
-    <label><input type="radio" name="to" value="Salesorders@car-o-linersw.com"> Salesorders@car-o-linersw.com</label>
-    <label><input type="radio" name="to" value="Systemorders@car-o-linersw.com"> Systemorders@car-o-linersw.com</label>
+    <div style="font-size:13px;opacity:.75;margin-bottom:8px">Check any office inboxes you want to send to. Uncheck all of them to send only to a customer.</div>
+    <label><input type="checkbox" name="to" value="Service@car-o-linersw.com" checked> Service@car-o-linersw.com</label>
+    <label><input type="checkbox" name="to" value="Salesorders@car-o-linersw.com"> Salesorders@car-o-linersw.com</label>
+    <label><input type="checkbox" name="to" value="Systemorders@car-o-linersw.com"> Systemorders@car-o-linersw.com</label>
+
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--stroke)">
+      <label for="customTo" style="margin-top:0">Customer / other recipient (optional) — separate multiple with commas</label>
+      <input id="customTo" type="text" autocomplete="off" placeholder="customer@example.com">
+    </div>
 
     <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--stroke)">
       <label for="ccEmails" style="margin-top:0">CC (optional) — separate multiple emails with commas</label>
@@ -263,7 +269,11 @@ const statusEl=$('#status');
 function setStatus(msg, ok=true){ statusEl.textContent=msg; statusEl.className = ok? 'good':'bad'; }
 function fmtUSD(n){return (+n||0).toLocaleString(undefined,{style:'currency',currency:'USD'});}
 function moneyToNumber(s){const n=parseFloat(String(s).replace(/[^0-9.\-]/g,''));return isFinite(n)?n:0;}
-function selectedSendTo(){const el=document.querySelector('input[name="to"]:checked');return el?el.value:'';}
+function selectedSendTo(){
+  const boxes = Array.from(document.querySelectorAll('input[name="to"]:checked')).map(el => el.value);
+  const custom = ($('#customTo') && $('#customTo').value || '').split(/[,;\s]+/).map(s=>s.trim()).filter(Boolean);
+  return boxes.concat(custom).join(', ');
+}
 
 /* CSV parsing with auto delimiter */
 function csvToRows(text){
@@ -537,7 +547,11 @@ document.querySelector('#sendQuote').addEventListener('click', async () => {
     region: $('#region').value,
     date: $('#date').value,
     notes: $('#overallNotes').value,
-    to: (document.querySelector('input[name="to"]:checked')||{}).value || 'Service@car-o-linersw.com',
+    to: (function(){
+      const boxes = Array.from(document.querySelectorAll('input[name="to"]:checked')).map(el => el.value);
+      const custom = ($('#customTo').value || '').split(/[,;\s]+/).map(s=>s.trim()).filter(Boolean);
+      return boxes.concat(custom);
+    })(),
     cc: ($('#ccEmails').value || '').split(/[,;\s]+/).map(s=>s.trim()).filter(Boolean),
     senderEmail: ($('#senderEmail').value || '').trim(),
     orderedBy: ($('#orderedBy').value || '').trim(),

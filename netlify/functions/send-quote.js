@@ -232,10 +232,19 @@ export const handler = async (event) => {
   try { data = JSON.parse(event.body || '{}'); }
   catch { return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'Invalid JSON' }) }; }
 
-  const to = data.to;
-  if (!to)               return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'Missing recipient (to)' }) };
-  if (!(data.cart || []).length) return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'Cart is empty' }) };
+  // Normalize To: accept array, comma/semicolon/whitespace-separated string, or single address.
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  let toList = [];
+  if (Array.isArray(data.to)) toList = data.to;
+  else if (typeof data.to === 'string') toList = data.to.split(/[,;\s]+/);
+  toList = toList.map(s => String(s).trim()).filter(Boolean);
+  if (!toList.length) return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'Pick at least one recipient in the Send To section (an office inbox or a customer address).' }) };
+  const badTo = toList.filter(e => !EMAIL_RE.test(e));
+  if (badTo.length) {
+    return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'Invalid recipient email(s): ' + badTo.join(', ') }) };
+  }
+
+  if (!(data.cart || []).length) return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'Cart is empty' }) };
   if (!data.senderEmail || !EMAIL_RE.test(data.senderEmail)) {
     return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'Please enter your email in the Send To section so replies come back to you.' }) };
   }
@@ -305,7 +314,7 @@ export const handler = async (event) => {
     await transporter.sendMail({
       from: `"${senderName}" <${SMTP_USER}>`,
       replyTo: senderEmail,
-      to,
+      to: toList,
       cc: ccList.length ? ccList : undefined,
       subject,
       text: bodyText,
