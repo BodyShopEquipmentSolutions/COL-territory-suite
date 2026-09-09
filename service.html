@@ -4,6 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Service Request – Car-O-Liner Southwest</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
 :root{--brand:#0B61A4;--ink:#f7fafc;--panel:rgba(255,255,255,.06);--stroke:rgba(255,255,255,.14);}
 *{box-sizing:border-box}
@@ -421,13 +422,71 @@ function fillPdfDoc(){
   $('#pTax').textContent  = fmtUSD(tax);
   $('#pTotal').textContent= fmtUSD(total);
 }
-function exportPdf(){
+async function exportPdf(){
   if(!cart.length){ alert('Please add at least one line item.'); return; }
   fillPdfDoc();
-  window.print(); // Save as PDF
+
+  const el = document.getElementById('pdfDoc');
+  // Temporarily reveal for rendering (off-screen so it doesn't flash the UI)
+  const prevStyle = el.getAttribute('style') || '';
+  el.setAttribute('style', 'display:block !important; position:fixed; left:-10000px; top:0; background:#fff; color:#000;');
+
+  const customerSafe = (($('#customer').value || 'customer').replace(/[^A-Za-z0-9]+/g,'_'));
+  const filename = `Quote-${customerSafe}.pdf`;
+
+  const btn = document.getElementById('exportPdf');
+  const oldTxt = btn.textContent; btn.disabled = true; btn.textContent = 'Building…';
+
+  try {
+    const opts = {
+      margin:       [0.4, 0.4, 0.4, 0.4],
+      filename:     filename,
+      image:        { type: 'jpeg', quality: 0.95 },
+      html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' },
+      pagebreak:    { mode: ['css','legacy'] }
+    };
+
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const canShareFile = !!(navigator.canShare && navigator.share);
+
+    if (isIOS && canShareFile) {
+      // On iOS: build a Blob and use the native Share sheet (Mail, Messages, AirDrop, Save to Files…)
+      const pdfBlob = await html2pdf().set(opts).from(el).outputPdf('blob');
+      const file = new File([pdfBlob], filename, { type: 'application/pdf' });
+      if (navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: filename, text: 'Service request quote' });
+        } catch (e) {
+          if (e.name !== 'AbortError') {
+            // Share cancelled or failed – fall back to download
+            const url = URL.createObjectURL(pdfBlob);
+            const a = document.createElement('a'); a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(()=>URL.revokeObjectURL(url), 5000);
+          }
+        }
+      } else {
+        // Share API can't handle files – fall back to download
+        const url = URL.createObjectURL(pdfBlob);
+        const a = document.createElement('a'); a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url), 5000);
+      }
+    } else {
+      // Desktop / Android: just download
+      await html2pdf().set(opts).from(el).save();
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Could not build PDF: ' + (err.message || err));
+  } finally {
+    el.setAttribute('style', prevStyle);
+    btn.disabled = false; btn.textContent = oldTxt;
+  }
 }
 document.querySelector('#exportPdf').addEventListener('click', exportPdf);
-// If user prints via browser menu, still populate
+// If user prints via browser menu (desktop), still populate the print doc
 window.onbeforeprint = fillPdfDoc;
 
 /* ------------------- SEND TO NETLIFY FUNCTION ------------------- */
@@ -451,6 +510,7 @@ document.querySelector('#sendQuote').addEventListener('click', async () => {
     date: $('#date').value,
     notes: $('#overallNotes').value,
     to: (document.querySelector('input[name="to"]:checked')||{}).value || 'Bodyshop.e.s@gmail.com',
+    senderEmail: (localStorage.getItem('colsw_sender_email') || $('#email').value || ''),
     cart: cart,
     totals: {
       subtotal: $('#subtotal').textContent,
