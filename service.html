@@ -6,32 +6,126 @@
 <title>Service Request – Car-O-Liner Southwest</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
-:root{--brand:#0B61A4;--ink:#f7fafc;--panel:rgba(255,255,255,.06);--stroke:rgba(255,255,255,.14);}
+:root{
+  --brand:#0B61A4;
+  --brand-dark:#08507F;
+  --ink:#f7fafc;
+  --ink-mute:rgba(255,255,255,.72);
+  --panel:rgba(255,255,255,.06);
+  --field:rgba(255,255,255,.10);
+  --field-focus:rgba(255,255,255,.18);
+  --stroke:rgba(255,255,255,.22);
+  --stroke-strong:rgba(255,255,255,.38);
+  --accent:#F5B301;
+  --danger:#ff6b6b;
+  --good:#4ade80;
+}
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--brand);color:var(--ink);font-family:ui-rounded,system-ui,-apple-system,Segoe UI,Inter,Roboto,sans-serif}
-.container{max-width:1100px;margin:0 auto;padding:16px}
+html,body{margin:0;background:linear-gradient(180deg,var(--brand) 0%,var(--brand-dark) 100%);background-attachment:fixed;color:var(--ink);font-family:ui-rounded,system-ui,-apple-system,Segoe UI,Inter,Roboto,sans-serif;-webkit-text-size-adjust:100%}
+.container{max-width:1100px;margin:0 auto;padding:16px 16px 120px}
+
+/* --- Cards & headers --- */
 .card{background:var(--panel);border:1px solid var(--stroke);border-radius:24px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
-.hbar{display:flex;gap:12px;align-items:center;margin-bottom:10px;padding:10px 14px}
-.logo{height:38px}
-.btn{background:#111827;border:1px solid var(--stroke);color:var(--ink);border-radius:12px;padding:10px 14px;cursor:pointer}
-input,select,textarea{width:100%;padding:12px;border-radius:14px;border:1px solid var(--stroke);background:rgba(0,0,0,.25);color:var(--ink)}
-label{display:block;margin:6px 0 6px 2px;font-size:13px;opacity:.9}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media (max-width:860px){ .row{grid-template-columns:1fr} }
+.hbar{display:flex;gap:12px;align-items:center;padding:10px 14px;position:sticky;top:0;z-index:50;margin-bottom:12px;background:rgba(8,80,127,.85);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.hbar h1{margin:0;font-size:20px;line-height:1.1}
+.logo{height:34px;flex:none}
+.hbar .nav{margin-left:auto;display:flex;gap:8px;flex:none}
+.hbar .stats{font-size:11px;opacity:.75;margin-left:8px;white-space:nowrap}
+@media (max-width:640px){
+  .hbar h1{font-size:16px}
+  .hbar .stats{display:none}
+  .hbar .nav .btn{padding:8px 10px;font-size:13px}
+}
+
+/* --- Step chips --- */
+.step{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.step .num{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#111;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.section-sub{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+
+/* --- Buttons --- */
+.btn{background:rgba(255,255,255,.10);border:1px solid var(--stroke-strong);color:var(--ink);border-radius:12px;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:600;transition:background .12s ease,border-color .12s ease,transform .05s ease}
+.btn:hover{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.5)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.primary{background:var(--accent);color:#111;border-color:var(--accent)}
+.btn.primary:hover{background:#ffc72e;border-color:#ffc72e}
+.btn.ghost{background:transparent}
+.btn.small{padding:6px 10px;font-size:13px;border-radius:10px}
+.btn.danger{background:rgba(255,107,107,.12);border-color:rgba(255,107,107,.4);color:#ffd7d7}
+.btn.danger:hover{background:rgba(255,107,107,.22)}
+
+/* --- Form fields (contrast fix) --- */
+input,select,textarea{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--stroke-strong);background:var(--field);color:var(--ink);font-size:15px;font-family:inherit;transition:background .12s ease,border-color .12s ease,box-shadow .12s ease}
+input::placeholder,textarea::placeholder{color:rgba(255,255,255,.5)}
+input:hover,select:hover,textarea:hover{border-color:rgba(255,255,255,.5)}
+input:focus,select:focus,textarea:focus{outline:none;background:var(--field-focus);border-color:var(--accent);box-shadow:0 0 0 3px rgba(245,179,1,.25)}
+input:invalid:not(:placeholder-shown){border-color:rgba(255,107,107,.55)}
+label{display:block;margin:0 0 6px 2px;font-size:13px;color:var(--ink-mute);font-weight:500}
+
+/* --- Grid --- */
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+@media (max-width:860px){.row,.row-3{grid-template-columns:1fr}}
+
+/* --- Tables --- */
 table{width:100%;border-collapse:collapse}
 th,td{padding:10px;border-bottom:1px solid var(--stroke);text-align:left;vertical-align:top;font-size:14px}
-.table-wrap{max-height:360px;overflow:auto;border-radius:14px}
-#parts thead th{position:sticky;top:0;background:rgba(0,0,0,.35);backdrop-filter:blur(10px);z-index:1}
+th{color:var(--ink-mute);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+.table-wrap{max-height:360px;overflow:auto;border-radius:14px;border:1px solid var(--stroke)}
+.h-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:14px;border:1px solid var(--stroke)}
+.h-scroll table{min-width:760px}
+#parts thead th{position:sticky;top:0;background:rgba(0,0,0,.45);backdrop-filter:blur(10px);z-index:1}
 
-/* white suggestion dropdowns */
-.suggest{position:absolute;left:0;right:0;top:70px;display:none;max-height:260px;overflow:auto;padding:6px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#111;z-index:2000}
-.suggest .opt{display:block;margin:0;padding:10px;border-radius:6px;background:#fff;border-bottom:1px solid #eee;cursor:pointer;font-size:14px}
+/* Empty state */
+.empty{padding:24px;text-align:center;color:var(--ink-mute);font-size:14px;font-style:italic}
+
+/* --- Suggestion dropdowns --- */
+.suggest{position:absolute;left:0;right:0;top:78px;display:none;max-height:280px;overflow:auto;padding:6px;border:1px solid rgba(0,0,0,.15);border-radius:12px;background:#fff;color:#111;z-index:2000;box-shadow:0 12px 40px rgba(0,0,0,.4)}
+.suggest .opt{display:block;margin:0;padding:10px 12px;border-radius:8px;background:#fff;border-bottom:1px solid #eee;cursor:pointer;font-size:14px}
 .suggest .opt:hover{background:#f3f4f6}
 
-/* status line */
-#status{margin-top:8px;font-size:12px;opacity:.9}
+/* --- Status line --- */
+#status{margin-top:10px;font-size:12px;opacity:.9}
 .good{color:#b8f7b8}
 .bad{color:#ffe08a}
+
+/* --- Send To checkbox rows --- */
+.check-row{display:flex;align-items:center;gap:10px;padding:10px 0;margin:0;font-size:14px;cursor:pointer;color:var(--ink)}
+.check-row input[type="checkbox"]{width:18px;height:18px;flex:none;margin:0;accent-color:var(--accent);cursor:pointer}
+.check-row + .check-row{border-top:1px solid var(--stroke)}
+
+/* --- Section separator inside a card --- */
+.card-sect + .card-sect{margin-top:16px;padding-top:16px;border-top:1px solid var(--stroke)}
+
+/* --- Totals block --- */
+.totals{display:flex;justify-content:flex-end;padding:12px 16px 16px}
+.totals-inner{min-width:260px;font-size:14px}
+.totals-inner .line{display:flex;justify-content:space-between;padding:4px 0}
+.totals-inner .line strong{font-variant-numeric:tabular-nums}
+.totals-inner .grand{border-top:2px solid var(--stroke-strong);margin-top:8px;padding-top:10px;font-size:20px;font-weight:700}
+.totals-inner .grand strong{color:var(--accent)}
+
+/* --- Sticky footer action bar --- */
+.action-bar{position:fixed;left:0;right:0;bottom:0;z-index:60;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:rgba(8,80,127,.9);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--stroke)}
+.action-bar-inner{max-width:1100px;margin:0 auto;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.action-bar .totals-mini{font-size:14px;color:var(--ink)}
+.action-bar .totals-mini .amt{font-size:18px;font-weight:700;color:var(--accent);margin-left:6px;font-variant-numeric:tabular-nums}
+.action-bar .btns{display:flex;gap:8px;margin-left:auto}
+@media (max-width:520px){
+  .action-bar-inner{gap:8px}
+  .action-bar .btn{flex:1;text-align:center}
+  .action-bar .totals-mini{width:100%;order:-1}
+}
+
+/* --- Toast --- */
+#toast{position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-20px);z-index:100;padding:12px 20px;border-radius:14px;background:rgba(15,20,25,.95);border:1px solid var(--stroke-strong);color:var(--ink);font-size:14px;font-weight:500;box-shadow:0 12px 40px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;max-width:calc(100% - 32px)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.good{border-color:rgba(74,222,128,.6);background:rgba(20,50,30,.95)}
+#toast.bad{border-color:rgba(255,107,107,.6);background:rgba(60,20,20,.95)}
+
+/* --- Cart row inputs are compact --- */
+#cart input,#cart select{padding:8px 10px;font-size:13px;border-radius:8px}
+#cart td{vertical-align:middle}
 
 /* ---------- PRINT (PDF) STYLES ---------- */
 @media print{
@@ -65,130 +159,157 @@ th,td{padding:10px;border-bottom:1px solid var(--stroke);text-align:left;vertica
 <div class="container no-print">
   <div class="card hbar">
     <img class="logo" src="assets/logo.png" alt="" onerror="this.style.display='none'">
-    <h1 style="margin:0">Service Request</h1>
-    <div style="margin-left:auto;display:flex;gap:8px">
+    <h1>Service Request</h1>
+    <span class="stats" id="headerStats">Loading…</span>
+    <div class="nav">
       <a class="btn" href="index.html">Home</a>
       <a class="btn" href="map.html">Map</a>
     </div>
   </div>
 
-  <!-- Customer block -->
-  <div class="card" style="padding:16px">
+  <!-- Step 1: Customer -->
+  <div class="card" style="padding:18px 18px 20px">
+    <div class="step"><span class="num">1</span> Customer</div>
     <div class="row">
       <div style="position:relative">
         <label>Company *</label>
-        <input id="customer" placeholder="Start typing a company…" autocomplete="off">
-        <div id="suggestCompany" class="suggest card"></div>
+        <input id="customer" placeholder="Start typing a company…" autocomplete="off" required>
+        <div id="suggestCompany" class="suggest"></div>
       </div>
-      <div><label>Contact Person *</label><input id="contact" placeholder="First Last"></div>
-      <div><label>Phone</label><input id="phone"></div>
-      <div><label>Email</label><input id="email"></div>
-      <div><label>Address</label><input id="address"></div>
+      <div><label>Contact Person *</label><input id="contact" placeholder="First Last" required></div>
+      <div><label>Phone</label><input id="phone" placeholder="(555) 555-5555"></div>
+      <div><label>Email</label><input id="email" type="email" placeholder="contact@shop.com"></div>
+      <div><label>Address</label><input id="address" placeholder="Street"></div>
       <div><label>City</label><input id="city"></div>
-      <div><label>State</label><input id="state"></div>
+      <div><label>State</label><input id="state" placeholder="TX"></div>
       <div><label>ZIP</label><input id="zip"></div>
-      <div><label>Rep (who’s writing)</label><input id="rep"></div>
+      <div><label>Rep (who’s writing) *</label><input id="rep" required></div>
       <div><label>Region</label><input id="region" value="Car-O-Liner Southwest"></div>
       <div><label>Date</label><input id="date" type="date"></div>
       <div><label>Overall Notes</label><input id="overallNotes" placeholder="General notes for this request"></div>
     </div>
-    <div id="status">Loading…</div>
+    <div id="status"></div>
   </div>
 
-  <!-- Parts lookup + cart -->
-  <div class="card" style="padding:16px;margin-top:16px">
-    <h2 style="margin:0 0 8px">Equipment / Parts Lookup</h2>
+  <!-- Step 2: Parts lookup + cart -->
+  <div class="card" style="padding:18px;margin-top:16px">
+    <div class="step"><span class="num">2</span> Equipment &amp; Parts</div>
     <div class="row">
       <div style="position:relative">
         <label>Item Number</label>
         <input id="itemSearch" placeholder="Enter Item Number…" autocomplete="off">
-        <div id="suggestItem" class="suggest card"></div>
+        <div id="suggestItem" class="suggest"></div>
       </div>
       <div><label>Results</label><input id="resCount" readonly></div>
     </div>
 
-    <div class="table-wrap card" style="margin-top:10px;padding:0">
+    <div class="table-wrap" style="margin-top:12px">
       <table id="parts">
-        <thead><tr><th>Item Number</th><th>Item Description</th><th>List price</th><th></th></tr></thead>
+        <thead><tr><th>Item Number</th><th>Item Description</th><th>List Price</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
 
-    <div class="card" style="padding:0;margin-top:12px">
-      <h3 style="padding:10px;margin:0">Selected Items</h3>
-      <table id="cart">
-        <thead>
-          <tr>
-            <th>Item #</th><th>Description</th><th>Price</th><th>Qty</th>
-            <th>Type</th><th>Notes</th><th>Repair/Replace</th><th>Line Total</th><th></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+    <div class="card" style="padding:0;margin-top:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--stroke)">
+        <h3 style="margin:0;font-size:15px">Selected Items</h3>
+        <span id="cartCount" style="font-size:12px;color:var(--ink-mute)">0 items</span>
+      </div>
+      <div class="h-scroll" style="border:none;border-radius:0">
+        <table id="cart">
+          <thead>
+            <tr>
+              <th>Item #</th><th>Description</th><th>Price</th><th>Qty</th>
+              <th>Type</th><th>Notes</th><th>Repair/Replace</th><th>Line Total</th><th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div id="cartEmpty" class="empty">No items yet — search above to add parts to this quote.</div>
+      </div>
 
-      <div style="display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px;flex-wrap:wrap">
-        <div class="row" style="gap:12px;flex:1">
+      <div style="padding:14px 16px;border-top:1px solid var(--stroke)">
+        <div class="section-sub">Adjustments</div>
+        <div class="row">
           <div><label>Sales Tax %</label><input id="taxPct" type="number" min="0" step="0.01" value="0"></div>
           <div><label>Freight ($)</label><input id="freight" type="number" min="0" step="0.01" value="0"></div>
         </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn" id="exportPdf">Export PDF</button>
-          <button class="btn" id="sendQuote">Send</button>
-        </div>
       </div>
 
-      <div class="row" style="padding:10px">
-        <div>Subtotal: <strong id="subtotal">$0.00</strong></div>
-        <div>Tax: <strong id="taxAmt">$0.00</strong></div>
-        <div>Freight: <strong id="freightAmt">$0.00</strong></div>
-        <div>Total: <strong id="grand">$0.00</strong></div>
+      <div class="totals">
+        <div class="totals-inner">
+          <div class="line"><span>Subtotal</span><strong id="subtotal">$0.00</strong></div>
+          <div class="line"><span>Tax</span><strong id="taxAmt">$0.00</strong></div>
+          <div class="line"><span>Freight</span><strong id="freightAmt">$0.00</strong></div>
+          <div class="line grand"><span>Total</span><strong id="grand">$0.00</strong></div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Send To -->
-  <div class="card" style="padding:16px;margin-top:16px">
-    <h2 style="margin-top:0">Send To</h2>
-    <div style="font-size:13px;opacity:.75;margin-bottom:8px">Check any office inboxes you want to send to. Uncheck all of them to send only to a customer.</div>
-    <label><input type="checkbox" name="to" value="Service@car-o-linersw.com" checked> Service@car-o-linersw.com</label>
-    <label><input type="checkbox" name="to" value="Salesorders@car-o-linersw.com"> Salesorders@car-o-linersw.com</label>
-    <label><input type="checkbox" name="to" value="Systemorders@car-o-linersw.com"> Systemorders@car-o-linersw.com</label>
+  <!-- Step 3: Send To -->
+  <div class="card" style="padding:18px;margin-top:16px">
+    <div class="step"><span class="num">3</span> Send</div>
 
-    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--stroke)">
-      <label for="customTo" style="margin-top:0">Customer / other recipient (optional) — separate multiple with commas</label>
-      <input id="customTo" type="text" autocomplete="off" placeholder="customer@example.com">
+    <div class="card-sect">
+      <div class="section-sub">Recipients</div>
+      <div style="font-size:13px;color:var(--ink-mute);margin-bottom:6px">Check any office inboxes to send to. Uncheck all to send only to a customer.</div>
+      <label class="check-row"><input type="checkbox" name="to" value="Service@car-o-linersw.com" checked><span>Service@car-o-linersw.com</span></label>
+      <label class="check-row"><input type="checkbox" name="to" value="Salesorders@car-o-linersw.com"><span>Salesorders@car-o-linersw.com</span></label>
+      <label class="check-row"><input type="checkbox" name="to" value="Systemorders@car-o-linersw.com"><span>Systemorders@car-o-linersw.com</span></label>
+
+      <div style="margin-top:12px">
+        <label for="customTo">Customer / other recipient (optional)</label>
+        <input id="customTo" type="text" autocomplete="off" placeholder="customer@example.com — separate multiple with commas">
+      </div>
+
+      <div style="margin-top:12px">
+        <label for="ccEmails">CC (optional)</label>
+        <input id="ccEmails" type="text" autocomplete="off" placeholder="person1@example.com, person2@example.com">
+        <label class="check-row" style="padding:8px 0 0;border:none">
+          <input id="rememberCc" type="checkbox"><span style="font-size:13px;color:var(--ink-mute)">Remember these CCs on this device</span>
+        </label>
+      </div>
     </div>
 
-    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--stroke)">
-      <label for="ccEmails" style="margin-top:0">CC (optional) — separate multiple emails with commas</label>
-      <input id="ccEmails" type="text" autocomplete="off" placeholder="person1@example.com, person2@example.com">
-      <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;opacity:.9">
-        <input id="rememberCc" type="checkbox" style="width:auto"> Remember these CCs on this device
+    <div class="card-sect">
+      <div class="section-sub">Reply-To</div>
+      <label for="senderEmail">Your email (replies come back to you) *</label>
+      <input id="senderEmail" type="email" autocomplete="email" placeholder="you@example.com" required>
+      <label class="check-row" style="padding:8px 0 0;border:none">
+        <input id="rememberSender" type="checkbox"><span style="font-size:13px;color:var(--ink-mute)">Remember me on this device</span>
       </label>
     </div>
 
-    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--stroke)">
-      <label for="senderEmail" style="margin-top:0">Your email (replies come back to you)</label>
-      <input id="senderEmail" type="email" autocomplete="email" placeholder="you@example.com">
-      <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;opacity:.9">
-        <input id="rememberSender" type="checkbox" style="width:auto"> Remember me on this device
-      </label>
-    </div>
-
-    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--stroke)">
-      <label for="orderedBy" style="margin-top:0">Who ordered the parts</label>
+    <div class="card-sect">
+      <div class="section-sub">Message</div>
+      <label for="orderedBy">Who ordered the parts</label>
       <input id="orderedBy" type="text" placeholder="Name of person who ordered">
 
-      <label for="recipientMessage" style="margin-top:10px">Message to recipient</label>
+      <label for="recipientMessage" style="margin-top:12px">Message to recipient</label>
       <textarea id="recipientMessage" rows="5" placeholder="Optional note to include in the email body…" style="resize:vertical"></textarea>
 
-      <div style="margin-top:10px;font-size:12px;opacity:.85">
-        The following will auto-fill from the form above and be appended to the email:
+      <div style="margin-top:12px;font-size:12px;color:var(--ink-mute)">
+        The following auto-fills from the form above and is appended to the email:
       </div>
-      <div id="contactPreview" style="margin-top:6px;padding:10px;border-radius:10px;background:rgba(0,0,0,.25);border:1px solid var(--stroke);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;white-space:pre-wrap;line-height:1.5">—</div>
+      <div id="contactPreview" style="margin-top:6px;padding:12px;border-radius:10px;background:rgba(0,0,0,.28);border:1px solid var(--stroke);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;white-space:pre-wrap;line-height:1.55">—</div>
     </div>
   </div>
 </div>
+
+<!-- Sticky action bar -->
+<div class="action-bar no-print">
+  <div class="action-bar-inner">
+    <div class="totals-mini">Total<span class="amt" id="grandMini">$0.00</span></div>
+    <div class="btns">
+      <button class="btn" id="exportPdf">Export PDF</button>
+      <button class="btn primary" id="sendQuote" disabled>Send Quote</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" role="status" aria-live="polite"></div>
 
 <!-- ---------- PRINT DOCUMENT (hidden on screen) ---------- -->
 <div id="pdfDoc">
@@ -266,7 +387,22 @@ th,td{padding:10px;border-bottom:1px solid var(--stroke);text-align:left;vertica
 /* ------------------- helpers ------------------- */
 const $=s=>document.querySelector(s);
 const statusEl=$('#status');
-function setStatus(msg, ok=true){ statusEl.textContent=msg; statusEl.className = ok? 'good':'bad'; }
+const headerStatsEl=$('#headerStats');
+function setStatus(msg, ok=true){
+  if (headerStatsEl) headerStatsEl.textContent = msg;
+  if (statusEl){ statusEl.textContent = ok ? '' : msg; statusEl.className = ok ? 'good' : 'bad'; }
+}
+
+/* --- Toast --- */
+let _toastTimer;
+function showToast(msg, kind='good', ms=3500){
+  const el = document.getElementById('toast');
+  if (!el){ (kind==='bad'?console.error:console.log)(msg); return; }
+  el.textContent = msg;
+  el.className = kind + ' show';
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(()=>{ el.className = ''; }, ms);
+}
 function fmtUSD(n){return (+n||0).toLocaleString(undefined,{style:'currency',currency:'USD'});}
 function moneyToNumber(s){const n=parseFloat(String(s).replace(/[^0-9.\-]/g,''));return isFinite(n)?n:0;}
 function selectedSendTo(){
@@ -310,7 +446,11 @@ async function tryCsv(path){
 async function loadPrice(){
   PRICE = await tryCsv('data/2025-COL_Distributor_ListPrice_06302025.csv')
        || await tryCsv('data/price_list.csv') || [];
-  setStatus(PRICE.length?`Loaded ${PRICE.length} parts`:'No parts loaded', !!PRICE.length);
+  const parts = PRICE.length, contacts = (CONTACTS||[]).length;
+  const msg = parts
+    ? `${parts.toLocaleString()} parts · ${contacts.toLocaleString()} contacts`
+    : 'No parts loaded';
+  setStatus(msg, !!parts);
 }
 
 /* ------------------- company autocomplete ------------------- */
@@ -382,8 +522,11 @@ const cart=[];
 function addToCart(r){cart.push({num:r.num,desc:r.desc,base:moneyToNumber(r.price),qty:1,type:'',notes:'',rr:'Replace'});renderCart();}
 function lineUnit(it){ return it.rr==='Repair' ? 0 : it.base; }  // Repair = $0
 function lineTotal(it){ return lineUnit(it) * it.qty; }
+const cartEmptyEl=$('#cartEmpty'), cartCountEl=$('#cartCount'), grandMiniEl=$('#grandMini');
 function renderCart(){
   cartBody.innerHTML=''; let sum=0;
+  if (cartEmptyEl) cartEmptyEl.style.display = cart.length ? 'none' : 'block';
+  if (cartCountEl) cartCountEl.textContent = cart.length + (cart.length===1?' item':' items');
   cart.forEach((it,idx)=>{
     const unit=lineUnit(it); const line=lineTotal(it); sum+=line;
     const tr=document.createElement('tr');
@@ -412,8 +555,29 @@ function renderCart(){
   const taxPct=parseFloat(taxPctEl.value||'0')/100; const freight=parseFloat(freightEl.value||'0');
   const tax=sum*(isFinite(taxPct)?taxPct:0); const grand=sum+(isFinite(tax)?tax:0)+(isFinite(freight)?freight:0);
   subtotalEl.textContent=fmtUSD(sum); taxAmtEl.textContent=fmtUSD(isFinite(tax)?tax:0);
-  freightAmtEl.textContent=fmtUSD(isFinite(freight)?freight:0); grandEl.textContent=fmtUSD(isFinite(grand)?grand:0);
+  freightAmtEl.textContent=fmtUSD(isFinite(freight)?freight:0);
+  const grandStr = fmtUSD(isFinite(grand)?grand:0);
+  grandEl.textContent = grandStr;
+  if (grandMiniEl) grandMiniEl.textContent = grandStr;
+  updateSendEnabled();
 }
+
+/* --- Enable Send only when required fields are filled and cart has items --- */
+function updateSendEnabled(){
+  const btn = document.querySelector('#sendQuote'); if (!btn) return;
+  const ok = !!(
+    cart.length &&
+    ($('#customer').value||'').trim() &&
+    ($('#contact').value||'').trim() &&
+    ($('#rep').value||'').trim() &&
+    ($('#senderEmail').value||'').trim()
+  );
+  btn.disabled = !ok;
+}
+document.addEventListener('input', (e)=>{
+  const id = e.target && e.target.id;
+  if (['customer','contact','rep','senderEmail'].includes(id)) updateSendEnabled();
+});
 taxPctEl.addEventListener('input',renderCart); freightEl.addEventListener('input',renderCart);
 
 /* ------------------- PDF export ------------------- */
@@ -461,7 +625,7 @@ function fillPdfDoc(){
   $('#pTotal').textContent= fmtUSD(total);
 }
 async function exportPdf(){
-  if(!cart.length){ alert('Please add at least one line item.'); return; }
+  if(!cart.length){ showToast('Add at least one line item first.', 'bad'); return; }
   fillPdfDoc();
 
   const el = document.getElementById('pdfDoc');
@@ -517,7 +681,7 @@ async function exportPdf(){
     }
   } catch (err) {
     console.error(err);
-    alert('Could not build PDF: ' + (err.message || err));
+    showToast('Could not build PDF: ' + (err.message || err), 'bad', 5000);
   } finally {
     el.setAttribute('style', prevStyle);
     btn.disabled = false; btn.textContent = oldTxt;
@@ -530,9 +694,16 @@ window.onbeforeprint = fillPdfDoc;
 /* ------------------- SEND TO NETLIFY FUNCTION ------------------- */
 document.querySelector('#sendQuote').addEventListener('click', async () => {
   if (!cart.length) {
-    alert('Please add at least one line item before sending.');
+    showToast('Add at least one line item before sending.', 'bad');
     return;
   }
+  // Guard: required fields
+  const missing = [];
+  if (!($('#customer').value||'').trim()) missing.push('Company');
+  if (!($('#contact').value||'').trim())  missing.push('Contact Person');
+  if (!($('#rep').value||'').trim())      missing.push('Rep');
+  if (!($('#senderEmail').value||'').trim()) missing.push('Your email');
+  if (missing.length){ showToast('Missing: ' + missing.join(', '), 'bad', 4500); return; }
 
   const data = {
     customer: $('#customer').value,
@@ -580,13 +751,15 @@ document.querySelector('#sendQuote').addEventListener('click', async () => {
     const out = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(out.error || res.statusText);
 
-    alert('Quote sent successfully!');
+    const recips = data.to.length ? data.to.join(', ') : '(no recipients)';
+    showToast('✓ Quote sent to ' + recips, 'good', 4500);
   } catch (err) {
     console.error(err);
-    alert('Send failed: ' + (err.message || 'Unknown error'));
+    showToast('Send failed: ' + (err.message || 'Unknown error'), 'bad', 5000);
   } finally {
     btn.disabled = false;
     btn.textContent = old;
+    updateSendEnabled();
   }
 });
 
@@ -659,11 +832,18 @@ document.querySelector('#sendQuote').addEventListener('click', async () => {
   await loadContacts();
   PRICE = await tryCsv('data/2025-COL_Distributor_ListPrice_06302025.csv')
        || await tryCsv('data/price_list.csv') || [];
-  setStatus(PRICE.length?`Loaded ${PRICE.length} parts · ${CONTACTS.length} contacts`:'Price list not found — check /data filename', !!PRICE.length);
+  setStatus(PRICE.length
+    ? `${PRICE.length.toLocaleString()} parts · ${CONTACTS.length.toLocaleString()} contacts`
+    : 'Price list not found — check /data filename',
+    !!PRICE.length);
 
   let t; $('#itemSearch').addEventListener('input',()=>{clearTimeout(t); t=setTimeout(runSearch,150);});
   $('#itemSearch').addEventListener('focus',()=>{ if($('#itemSearch').value) runSearch(); });
   document.addEventListener('click',e=>{ if(!$('#suggestItem').contains(e.target)&&e.target!==$('#itemSearch')) $('#suggestItem').style.display='none'; });
+
+  // Initial state
+  renderCart();
+  updateSendEnabled();
 })();
 </script>
 </body>
