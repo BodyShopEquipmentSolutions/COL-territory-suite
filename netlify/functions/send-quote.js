@@ -186,9 +186,16 @@ async function buildPdf(data) {
 
   let subtotal = 0;
   (data.cart || []).forEach((it, i) => {
-    const qty   = Number(it.qty) || 0;
-    const price = Number(it.price) || 0;
-    const line  = qty * price;
+    const qty = Number(it.qty) || 0;
+    // Client stores numeric unit price under `base` (see service.html:addToCart);
+    // fall back to `price` for older payloads. Repair lines are $0 by design.
+    const rawUnit = it.base != null ? it.base
+                  : (typeof it.price === 'string'
+                       ? Number(String(it.price).replace(/[^0-9.\-]/g, ''))
+                       : Number(it.price));
+    const unit = it.rr === 'Repair' ? 0 : (Number(rawUnit) || 0);
+    const price = unit;
+    const line  = qty * unit;
     subtotal   += line;
     const desc  = `${it.desc || ''}${it.type ? ' — ' + it.type : ''}${it.rr === 'Repair' ? ' (REPAIR)' : ''}${it.notes ? ' — ' + it.notes : ''}`;
     drawRow([
