@@ -729,12 +729,17 @@ function setAssemblyStatus(path, status){
   const leaves = collectAuditLeaves(node.children || []);
   panel.expanded = panel.expanded || {};
   if (status === 'present'){
-    leaves.forEach(l => { l.status = 'present'; l.qty = 1; l.note = ''; });
+    leaves.forEach(l => { l.status = 'present'; l.qty = 1; l.note = ''; l.wholeAssembly = false; });
     panel.expanded[path] = false;
   } else if (status === 'missing'){
-    leaves.forEach(l => { l.status = 'missing'; l.qty = l.qtyNeeded || 1; });
+    // Whole assembly missing — mark each leaf as part of the whole so the
+    // server rolls them up into ONE parent SKU line with no sub-part detail.
+    leaves.forEach(l => { l.status = 'missing'; l.qty = 1; l.wholeAssembly = true; });
     panel.expanded[path] = false;
   } else if (status === 'damaged' || status === 'pick-missing'){
+    // Picking individual sub-parts — clear the whole-assembly flag so
+    // detail comments show up on the quote for each flagged leaf.
+    leaves.forEach(l => { l.wholeAssembly = false; });
     panel.expanded[path] = true;
   }
   render();
@@ -910,8 +915,9 @@ function quotePreviewGroups(panel){
     const pn = row.parentPartNumber || row.partNumber || '';
     const desc = row.parentDescription || row.description || '';
     const key = `${pn}\u0000${desc}`;
-    if (!groups.has(key)) groups.set(key, {partNumber: pn, description: desc, children: [], isParent: !!row.parentPartNumber});
+    if (!groups.has(key)) groups.set(key, {partNumber: pn, description: desc, children: [], isParent: !!row.parentPartNumber, wholeAssembly: !!row.wholeAssembly});
     groups.get(key).children.push(row);
+    if (row.wholeAssembly) groups.get(key).wholeAssembly = true;
   });
   return [...groups.values()];
 }
@@ -921,7 +927,8 @@ function renderQuotePreview(){
     const groups = quotePreviewGroups(p);
     return `<div style="margin-top:10px"><div style="font-size:12px;font-weight:700;color:var(--brand)">${escapeHtml(p.bundle_name)} #${p.unit_number}</div>${groups.map(g => `
       <div style="margin:5px 0 0;padding:8px;background:#f8fafc;border-radius:7px"><div style="font-size:13px;font-weight:600">${escapeHtml(g.partNumber)} — ${escapeHtml(g.description)}</div>
-      ${g.isParent ? `<div style="font-size:12px;color:var(--muted);margin-top:3px">${g.children.map(c => `• ${escapeHtml(c.partNumber)} (${escapeHtml(c.status)} ${escapeHtml(c.qty || 1)})`).join('<br>')}</div>` : ''}</div>`).join('')}</div>`;
+      ${g.isParent && g.wholeAssembly ? `<div style="font-size:12px;color:var(--muted);margin-top:3px;font-style:italic">Whole assembly — quoted as one line (× 1)</div>` : ''}
+      ${g.isParent && !g.wholeAssembly ? `<div style="font-size:12px;color:var(--muted);margin-top:3px">${g.children.map(c => `• ${escapeHtml(c.partNumber)} (${escapeHtml(c.status)} ${escapeHtml(c.qty || 1)})`).join('<br>')}</div>` : ''}</div>`).join('')}</div>`;
   }).join('');
 }
 function openReview(){
@@ -968,10 +975,10 @@ async function confirmCreateQuote(){
       unit_number: p.unit_number,
       auditPointsChecked: (p.items || []).length,
       missing: p.items.filter(i => i.status === 'missing').map(i => ({
-        partNumber: i.partNumber, description: i.description, qty: i.qty || 1, note: i.note || '', parentPartNumber: i.parentPartNumber || '', parentDescription: i.parentDescription || '',
+        partNumber: i.partNumber, description: i.description, qty: i.qty || 1, note: i.note || '', parentPartNumber: i.parentPartNumber || '', parentDescription: i.parentDescription || '', wholeAssembly: !!i.wholeAssembly,
       })),
       damaged: p.items.filter(i => i.status === 'damaged').map(i => ({
-        partNumber: i.partNumber, description: i.description, qty: i.qty || 1, note: i.note || '', parentPartNumber: i.parentPartNumber || '', parentDescription: i.parentDescription || '',
+        partNumber: i.partNumber, description: i.description, qty: i.qty || 1, note: i.note || '', parentPartNumber: i.parentPartNumber || '', parentDescription: i.parentDescription || '', wholeAssembly: !!i.wholeAssembly,
       })),
       custom: (p.custom || []).map(c => ({
         id: c.id, partNumber: c.partNumber, description: c.description, qty: c.qty || 1, note: c.note || '',

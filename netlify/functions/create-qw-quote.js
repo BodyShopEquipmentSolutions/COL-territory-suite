@@ -178,7 +178,21 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
       const partNumber = it.parentPartNumber || it.partNumber || '';
       const description = it.parentDescription || it.description || '';
       const key = `${partNumber}\u0000${description}`;
-      if (!rollups.has(key)) rollups.set(key, { partNumber, description, leaves: [], isExpanded: !!it.parentPartNumber });
+      if (!rollups.has(key)) rollups.set(key, {
+        partNumber,
+        description,
+        leaves: [],
+        // "Expanded" means we itemize sub-parts as comments under the parent SKU.
+        // If the user marked the whole assembly missing/damaged, we quote the
+        // parent as ONE line with no sub-part detail.
+        isExpanded: !!it.parentPartNumber && !it.wholeAssembly,
+        wholeAssembly: !!it.wholeAssembly,
+      });
+      if (it.wholeAssembly) {
+        const r = rollups.get(key);
+        r.wholeAssembly = true;
+        r.isExpanded = false;
+      }
       rollups.get(key).leaves.push(it);
     });
     for (const rollup of rollups.values()) {
@@ -191,9 +205,11 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
         PartNumber: rollup.partNumber,
         Description: rollup.description,
         QtyBase: billableQty,
-        Notes: rollup.isExpanded
-          ? `BOM audit finding from ${bundle} #${unit}; see following comment lines.`
-          : `${first.auditStatus.toUpperCase()} from ${bundle} #${unit}${first.note ? ' — ' + first.note : ''}`,
+        Notes: rollup.wholeAssembly
+          ? `${first.auditStatus.toUpperCase()} — whole assembly from ${bundle} #${unit}${first.note ? ' — ' + first.note : ''}`
+          : rollup.isExpanded
+            ? `BOM audit finding from ${bundle} #${unit}; see following comment lines.`
+            : `${first.auditStatus.toUpperCase()} from ${bundle} #${unit}${first.note ? ' — ' + first.note : ''}`,
       });
       if (rollup.isExpanded) {
         for (const leaf of rollup.leaves) {
