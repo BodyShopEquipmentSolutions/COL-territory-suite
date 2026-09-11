@@ -107,15 +107,18 @@ async function createHeader(base, apiKey, { rep, customer }) {
     SalesRep: rep,
   };
   // SoldTo fields — populate what we have; QW ignores unknown fields.
+  // Accept both { company } and { customer } (frontend picker uses the latter).
   if (customer) {
-    if (customer.company) attrs.SoldToCompany = customer.company;
-    if (customer.city)    attrs.SoldToCity    = customer.city;
-    if (customer.state)   attrs.SoldToState   = customer.state;
-    if (customer.phone)   attrs.SoldToPhone   = customer.phone;
-    if (customer.email)   attrs.SoldToEmail   = customer.email;
+    const company = customer.company || customer.customer;
+    if (company)          attrs.SoldToCompany  = company;
+    if (customer.city)    attrs.SoldToCity     = customer.city;
+    if (customer.state)   attrs.SoldToState    = customer.state;
+    if (customer.phone)   attrs.SoldToPhone    = customer.phone;
+    if (customer.email)   attrs.SoldToEmail    = customer.email;
     if (customer.address) attrs.SoldToAddress1 = customer.address;
-    if (customer.zip)     attrs.SoldToZip     = customer.zip;
-    if (customer.contact) attrs.SoldToContact = customer.contact;
+    if (customer.zip)     attrs.SoldToZip      = customer.zip;
+    if (customer.contact || customer.attention)
+      attrs.SoldToContact = customer.contact || customer.attention;
   }
   const body = { data: { type: 'DocumentHeaders', attributes: attrs } };
   const res = await qwFetch(base, apiKey, '/api/v1/qw/tables/DocumentHeaders', { method: 'POST', body });
@@ -125,11 +128,12 @@ async function createHeader(base, apiKey, { rep, customer }) {
   return { id, docNo: docNo || null };
 }
 
-async function createLine(base, apiKey, docId, attrs) {
+async function createLine(base, apiKey, docRecGuid, attrs) {
+  // QW requires DocRecGUID (the header's `id`) on every DocumentItems insert.
   const body = {
     data: {
       type: 'DocumentItems',
-      attributes: { DocID: docId, ...attrs },
+      attributes: { DocRecGUID: docRecGuid, ...attrs },
     },
   };
   return qwFetch(base, apiKey, '/api/v1/qw/tables/DocumentItems', { method: 'POST', body });
@@ -155,9 +159,9 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
     const custom  = Array.isArray(panel.custom)  ? panel.custom  : [];
     if (!missing.length && !damaged.length && !custom.length) continue;
 
-    // Header/comment line for this unit
+    // Header/comment line for this unit (LineType 2 = comment in QW)
     await createLine(base, apiKey, docId, {
-      LineType: 0,
+      LineType: 2,
       PartNumber: '',
       Description: `═ ${bundle} #${unit} — Missing/Damaged Items ═`,
     });
@@ -195,7 +199,7 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
         for (const leaf of rollup.leaves) {
           const note = leaf.note ? ` — ${leaf.note}` : '';
           await createLine(base, apiKey, docId, {
-            LineType: 0,
+            LineType: 2,
             PartNumber: '',
             Description: `  - ${leaf.partNumber || ''} (${leaf.auditStatus} ${Number(leaf.qty) || 1}) — ${leaf.description || ''}${note}`,
           });
