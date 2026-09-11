@@ -99,50 +99,24 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-// QW SoldTo* column max lengths (SQL Server nvarchar caps). Anything longer
-// gets truncated to avoid "String or binary data would be truncated" 8152.
-const SOLD_TO_MAX = {
-  SoldToCompany:  50,
-  SoldToContact:  50,
-  SoldToAddress1: 50,
-  SoldToAddress2: 50,
-  SoldToAddress3: 50,
-  SoldToCity:     50,
-  SoldToState:    20,
-  SoldToZip:      20,
-  SoldToCountry:  50,
-  SoldToPhone:    20,
-  SoldToFax:      20,
-  SoldToEmail:   100,
-};
-function clip(field, val) {
-  if (val == null) return val;
-  const s = String(val);
-  const max = SOLD_TO_MAX[field];
-  return max && s.length > max ? s.slice(0, max) : s;
-}
-
 async function createHeader(base, apiKey, { rep, customer }) {
+  // Minimal header. QuoteWerks already has customer + product data — we only
+  // tell it WHO the quote is for and WHICH rep. If the customer came from the
+  // QW CRM (has an id), we link by SoldToCMCompanyRecID and QW auto-fills
+  // every SoldTo field itself. Otherwise we fall back to a plain company name.
   const attrs = {
     DocType: 'QUOTE',
     DocStatus: 'Open',
     DocDate: nowIso(),
     SalesRep: rep,
   };
-  // SoldTo fields — populate what we have; QW ignores unknown fields.
-  // Accept both { company } and { customer } (frontend picker uses the latter).
-  // Every value is clipped to the QW column width so we never hit 8152.
   if (customer) {
-    const company = customer.company || customer.customer;
-    if (company)          attrs.SoldToCompany  = clip('SoldToCompany',  company);
-    if (customer.city)    attrs.SoldToCity     = clip('SoldToCity',     customer.city);
-    if (customer.state)   attrs.SoldToState    = clip('SoldToState',    customer.state);
-    if (customer.phone)   attrs.SoldToPhone    = clip('SoldToPhone',    customer.phone);
-    if (customer.email)   attrs.SoldToEmail    = clip('SoldToEmail',    customer.email);
-    if (customer.address) attrs.SoldToAddress1 = clip('SoldToAddress1', customer.address);
-    if (customer.zip)     attrs.SoldToZip      = clip('SoldToZip',      customer.zip);
-    if (customer.contact || customer.attention)
-      attrs.SoldToContact = clip('SoldToContact', customer.contact || customer.attention);
+    if (customer.id) {
+      attrs.SoldToCMCompanyRecID = String(customer.id);
+    } else {
+      const company = customer.company || customer.customer || '';
+      if (company) attrs.SoldToCompany = String(company).slice(0, 50);
+    }
   }
   const body = { data: { type: 'DocumentHeaders', attributes: attrs } };
   const res = await qwFetch(base, apiKey, '/api/v1/qw/tables/DocumentHeaders', { method: 'POST', body });
@@ -174,7 +148,8 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
   const header = await createHeader(base, apiKey, { rep, customer });
   const docId = header.id;
 
-  // Build the line stream. Skip any panel that has nothing to quote.
+  // Build the FULL line plan up front, then dispatch in parallel.
+  const plan = [];
   for (const panel of panels) {
     const bundle = panel.bundle_name || 'Bundle';
     const unit = panel.unit_number || 1;
@@ -182,13 +157,6 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
     const damaged = Array.isArray(panel.damaged) ? panel.damaged : [];
     const custom  = Array.isArray(panel.custom)  ? panel.custom  : [];
     if (!missing.length && !damaged.length && !custom.length) continue;
-
-    // Header/comment line for this unit (LineType 2 = comment in QW)
-    await createLine(base, apiKey, docId, {
-      LineType: 2,
-      PartNumber: '',
-      Description: `═ ${bundle} #${unit} — Missing/Damaged Items ═`,
-    });
 
     // BOM leaves identify their sellable parent through parentPartNumber.
     // Consolidate every flagged leaf beneath one parent SKU, but preserve the
@@ -219,45 +187,30 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
       }
       rollups.get(key).leaves.push(it);
     });
+    // One line per unique parent SKU. Just PartNumber + QtyBase —
+    // QW pulls description, manufacturer, price from its product database.
     for (const rollup of rollups.values()) {
       const billableQty = rollup.isExpanded ? 1 : (Number(rollup.leaves[0].qty) || 1);
-      const first = rollup.leaves[0];
-      await createLine(base, apiKey, docId, {
+      plan.push({
         LineType: 1,
-        Manufacturer: 'CAR',
-        ManufacturerPartNumber: rollup.partNumber,
         PartNumber: rollup.partNumber,
-        Description: rollup.description,
         QtyBase: billableQty,
-        Notes: rollup.wholeAssembly
-          ? `${first.auditStatus.toUpperCase()} — whole assembly from ${bundle} #${unit}${first.note ? ' — ' + first.note : ''}`
-          : rollup.isExpanded
-            ? `BOM audit finding from ${bundle} #${unit}; see following comment lines.`
-            : `${first.auditStatus.toUpperCase()} from ${bundle} #${unit}${first.note ? ' — ' + first.note : ''}`,
       });
-      if (rollup.isExpanded) {
-        for (const leaf of rollup.leaves) {
-          const note = leaf.note ? ` — ${leaf.note}` : '';
-          await createLine(base, apiKey, docId, {
-            LineType: 2,
-            PartNumber: '',
-            Description: `  - ${leaf.partNumber || ''} (${leaf.auditStatus} ${Number(leaf.qty) || 1}) — ${leaf.description || ''}${note}`,
-          });
-        }
-      }
     }
     for (const it of custom) {
       const pn = it.partNumber || (it.id ? `CAR${it.id}` : '');
-      await createLine(base, apiKey, docId, {
+      plan.push({
         LineType: 1,
-        Manufacturer: 'CAR',
-        ManufacturerPartNumber: pn,
         PartNumber: pn,
-        Description: it.description || '',
         QtyBase: Number(it.qty) || 1,
-        Notes: `Custom addition from ${bundle} #${unit} audit${it.note ? ' — ' + it.note : ''}`,
       });
     }
+  }
+
+  // Sequential insert preserves LineNumberActual assignment order in QW.
+  // The frontend collapses whole-assembly rollups so this loop stays small.
+  for (let i = 0; i < plan.length; i++) {
+    await createLine(base, apiKey, docId, { LineNumberActual: i + 1, ...plan[i] });
   }
 
   // Re-fetch header to pick up the DocNo (assigned server-side on create in

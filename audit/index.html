@@ -934,9 +934,21 @@ function renderQuotePreview(){
 function openReview(){
   const dlg = $('#review-dlg');
   let miss=0, dmg=0, cus=0;
+  // Count what will actually hit QuoteWerks: whole-assembly rollups become
+  // ONE line each; individual sub-part picks each count as one.
   state.panels.forEach(p => {
-    const s = panelSummary(p);
-    miss += s.miss; dmg += s.dmg; cus += s.cus;
+    const seenWhole = new Set();
+    (p.items || []).forEach(i => {
+      if (i.status !== 'missing' && i.status !== 'damaged') return;
+      if (i.wholeAssembly && i.parentPartNumber) {
+        const key = i.status + '\u0000' + i.parentPartNumber;
+        if (seenWhole.has(key)) return;
+        seenWhole.add(key);
+      }
+      if (i.status === 'missing') miss++;
+      else if (i.status === 'damaged') dmg++;
+    });
+    cus += (p.custom || []).length;
   });
   const activePanels = state.panels.filter(p => panelSummary(p).hasWork).length;
   $('#review-body').innerHTML = `
@@ -966,25 +978,55 @@ async function confirmCreateQuote(){
   err.style.display = 'none';
   btn.disabled = true;
   btn.textContent = 'Creating quote…';
+  // Rolling status — tell the user roughly what's happening. Server-side we
+  // can't stream progress from Netlify functions, so approximate by elapsed time.
+  const t0 = Date.now();
+  const statusTimer = setInterval(() => {
+    const s = Math.round((Date.now() - t0) / 1000);
+    if (s < 5)       btn.textContent = 'Creating quote…';
+    else if (s < 12) btn.textContent = `Adding line items… (${s}s)`;
+    else if (s < 22) btn.textContent = `Still working… large quote (${s}s)`;
+    else             btn.textContent = `Still working… hang tight (${s}s)`;
+  }, 1000);
 
-  // Build the payload — strip present items and internal flags
+  // Minimal payload — QuoteWerks only needs PartNumber + Qty for each line.
+  // Whole-assembly rollups collapse to ONE row for the parent SKU.
+  function toLines(items, status) {
+    const flagged = items.filter(i => i.status === status);
+    const wholeParents = new Map();
+    const picks = [];
+    for (const i of flagged) {
+      if (i.wholeAssembly && i.parentPartNumber) {
+        if (!wholeParents.has(i.parentPartNumber)) {
+          wholeParents.set(i.parentPartNumber, { partNumber: i.parentPartNumber, qty: 1 });
+        }
+      } else {
+        picks.push({
+          partNumber: i.partNumber,
+          qty: i.qty || 1,
+          parentPartNumber: i.parentPartNumber || '',
+        });
+      }
+    }
+    return [...wholeParents.values(), ...picks];
+  }
   const panels = state.panels
     .filter(p => panelSummary(p).hasWork)
     .map(p => ({
       bundle_name: p.bundle_name,
       unit_number: p.unit_number,
-      auditPointsChecked: (p.items || []).length,
-      missing: p.items.filter(i => i.status === 'missing').map(i => ({
-        partNumber: i.partNumber, description: i.description, qty: i.qty || 1, note: i.note || '', parentPartNumber: i.parentPartNumber || '', parentDescription: i.parentDescription || '', wholeAssembly: !!i.wholeAssembly,
-      })),
-      damaged: p.items.filter(i => i.status === 'damaged').map(i => ({
-        partNumber: i.partNumber, description: i.description, qty: i.qty || 1, note: i.note || '', parentPartNumber: i.parentPartNumber || '', parentDescription: i.parentDescription || '', wholeAssembly: !!i.wholeAssembly,
-      })),
+      missing: toLines(p.items, 'missing'),
+      damaged: toLines(p.items, 'damaged'),
       custom: (p.custom || []).map(c => ({
-        id: c.id, partNumber: c.partNumber, description: c.description, qty: c.qty || 1, note: c.note || '',
+        partNumber: c.partNumber || (c.id ? 'CAR' + c.id : ''),
+        qty: c.qty || 1,
       })),
     }));
 
+  // Client timeout — Netlify functions cap at 26s; give it a bit more slack
+  // and surface a friendly error instead of hanging forever.
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 45000);
   try {
     const res = await fetch('/.netlify/functions/create-qw-quote', {
       method: 'POST',
@@ -995,6 +1037,7 @@ async function confirmCreateQuote(){
         customer: state.customer,
         panels,
       }),
+      signal: controller.signal,
     });
     const j = await res.json();
     if (!j.ok) throw new Error(j.error || 'Quote creation failed');
@@ -1003,10 +1046,17 @@ async function confirmCreateQuote(){
     closeReview();
     render();
   } catch(e){
-    err.textContent = e.message;
+    let msg = e.message;
+    if (e.name === 'AbortError') {
+      msg = 'The quote is taking longer than 45 seconds. It may still finish in QuoteWerks — check QW for a new quote by ' + escapeHtml(prettyRep(state.rep)) + ' before re-submitting to avoid a duplicate.';
+    }
+    err.textContent = msg;
     err.style.display = 'block';
     btn.disabled = false;
     btn.textContent = 'Create Quote in QuoteWerks';
+  } finally {
+    clearInterval(statusTimer);
+    clearTimeout(timeoutId);
   }
 }
 
