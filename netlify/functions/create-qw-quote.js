@@ -99,6 +99,29 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+// QW SoldTo* column max lengths (SQL Server nvarchar caps). Anything longer
+// gets truncated to avoid "String or binary data would be truncated" 8152.
+const SOLD_TO_MAX = {
+  SoldToCompany:  50,
+  SoldToContact:  50,
+  SoldToAddress1: 50,
+  SoldToAddress2: 50,
+  SoldToAddress3: 50,
+  SoldToCity:     50,
+  SoldToState:    20,
+  SoldToZip:      20,
+  SoldToCountry:  50,
+  SoldToPhone:    20,
+  SoldToFax:      20,
+  SoldToEmail:   100,
+};
+function clip(field, val) {
+  if (val == null) return val;
+  const s = String(val);
+  const max = SOLD_TO_MAX[field];
+  return max && s.length > max ? s.slice(0, max) : s;
+}
+
 async function createHeader(base, apiKey, { rep, customer }) {
   const attrs = {
     DocType: 'QUOTE',
@@ -108,17 +131,18 @@ async function createHeader(base, apiKey, { rep, customer }) {
   };
   // SoldTo fields — populate what we have; QW ignores unknown fields.
   // Accept both { company } and { customer } (frontend picker uses the latter).
+  // Every value is clipped to the QW column width so we never hit 8152.
   if (customer) {
     const company = customer.company || customer.customer;
-    if (company)          attrs.SoldToCompany  = company;
-    if (customer.city)    attrs.SoldToCity     = customer.city;
-    if (customer.state)   attrs.SoldToState    = customer.state;
-    if (customer.phone)   attrs.SoldToPhone    = customer.phone;
-    if (customer.email)   attrs.SoldToEmail    = customer.email;
-    if (customer.address) attrs.SoldToAddress1 = customer.address;
-    if (customer.zip)     attrs.SoldToZip      = customer.zip;
+    if (company)          attrs.SoldToCompany  = clip('SoldToCompany',  company);
+    if (customer.city)    attrs.SoldToCity     = clip('SoldToCity',     customer.city);
+    if (customer.state)   attrs.SoldToState    = clip('SoldToState',    customer.state);
+    if (customer.phone)   attrs.SoldToPhone    = clip('SoldToPhone',    customer.phone);
+    if (customer.email)   attrs.SoldToEmail    = clip('SoldToEmail',    customer.email);
+    if (customer.address) attrs.SoldToAddress1 = clip('SoldToAddress1', customer.address);
+    if (customer.zip)     attrs.SoldToZip      = clip('SoldToZip',      customer.zip);
     if (customer.contact || customer.attention)
-      attrs.SoldToContact = customer.contact || customer.attention;
+      attrs.SoldToContact = clip('SoldToContact', customer.contact || customer.attention);
   }
   const body = { data: { type: 'DocumentHeaders', attributes: attrs } };
   const res = await qwFetch(base, apiKey, '/api/v1/qw/tables/DocumentHeaders', { method: 'POST', body });
