@@ -989,8 +989,9 @@ async function confirmCreateQuote(){
     else             btn.textContent = `Still working… hang tight (${s}s)`;
   }, 1000);
 
-  // Minimal payload — QuoteWerks only needs PartNumber + Qty for each line.
-  // Whole-assembly rollups collapse to ONE row for the parent SKU.
+  // Build payload. Whole-assembly rollups collapse to ONE row for the parent
+  // SKU (with the parent description). Individual picks keep their own
+  // partNumber + parent link so the server can group them under one parent.
   function toLines(items, status) {
     const flagged = items.filter(i => i.status === status);
     const wholeParents = new Map();
@@ -998,13 +999,20 @@ async function confirmCreateQuote(){
     for (const i of flagged) {
       if (i.wholeAssembly && i.parentPartNumber) {
         if (!wholeParents.has(i.parentPartNumber)) {
-          wholeParents.set(i.parentPartNumber, { partNumber: i.parentPartNumber, qty: 1 });
+          wholeParents.set(i.parentPartNumber, {
+            partNumber: i.parentPartNumber,
+            description: i.parentDescription || i.description || '',
+            qty: 1,
+            wholeAssembly: true,
+          });
         }
       } else {
         picks.push({
           partNumber: i.partNumber,
+          description: i.description || '',
           qty: i.qty || 1,
           parentPartNumber: i.parentPartNumber || '',
+          parentDescription: i.parentDescription || '',
         });
       }
     }
@@ -1019,6 +1027,7 @@ async function confirmCreateQuote(){
       damaged: toLines(p.items, 'damaged'),
       custom: (p.custom || []).map(c => ({
         partNumber: c.partNumber || (c.id ? 'CAR' + c.id : ''),
+        description: c.description || '',
         qty: c.qty || 1,
       })),
     }));

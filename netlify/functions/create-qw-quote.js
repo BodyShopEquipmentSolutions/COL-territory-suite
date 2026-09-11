@@ -99,11 +99,22 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+// QW SoldTo* column max lengths. QW rejects any value longer than these.
+const SOLD_TO_MAX = {
+  SoldToCompany: 50, SoldToContact: 50, SoldToAddress1: 50, SoldToCity: 50,
+  SoldToState: 20, SoldToZip: 20, SoldToPhone: 20, SoldToEmail: 100,
+};
+function clip(field, val) {
+  if (val == null) return val;
+  const s = String(val);
+  const max = SOLD_TO_MAX[field];
+  return max && s.length > max ? s.slice(0, max) : s;
+}
+
 async function createHeader(base, apiKey, { rep, customer }) {
-  // Minimal header. QuoteWerks already has customer + product data — we only
-  // tell it WHO the quote is for and WHICH rep. If the customer came from the
-  // QW CRM (has an id), we link by SoldToCMCompanyRecID and QW auto-fills
-  // every SoldTo field itself. Otherwise we fall back to a plain company name.
+  // QW's REST API does NOT auto-populate SoldTo fields from a CRM link on POST.
+  // Send every field the frontend has — and also stamp SoldToCMCompanyRecID
+  // so the quote stays associated with the CRM record for future lookups.
   const attrs = {
     DocType: 'QUOTE',
     DocStatus: 'Open',
@@ -111,12 +122,17 @@ async function createHeader(base, apiKey, { rep, customer }) {
     SalesRep: rep,
   };
   if (customer) {
-    if (customer.id) {
-      attrs.SoldToCMCompanyRecID = String(customer.id);
-    } else {
-      const company = customer.company || customer.customer || '';
-      if (company) attrs.SoldToCompany = String(company).slice(0, 50);
-    }
+    const company = customer.company || customer.customer;
+    if (company)          attrs.SoldToCompany  = clip('SoldToCompany',  company);
+    if (customer.city)    attrs.SoldToCity     = clip('SoldToCity',     customer.city);
+    if (customer.state)   attrs.SoldToState    = clip('SoldToState',    customer.state);
+    if (customer.phone)   attrs.SoldToPhone    = clip('SoldToPhone',    customer.phone);
+    if (customer.email)   attrs.SoldToEmail    = clip('SoldToEmail',    customer.email);
+    if (customer.address) attrs.SoldToAddress1 = clip('SoldToAddress1', customer.address);
+    if (customer.zip)     attrs.SoldToZip      = clip('SoldToZip',      customer.zip);
+    if (customer.contact || customer.attention)
+      attrs.SoldToContact = clip('SoldToContact', customer.contact || customer.attention);
+    if (customer.id) attrs.SoldToCMCompanyRecID = String(customer.id);
   }
   const body = { data: { type: 'DocumentHeaders', attributes: attrs } };
   const res = await qwFetch(base, apiKey, '/api/v1/qw/tables/DocumentHeaders', { method: 'POST', body });
@@ -187,13 +203,16 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
       }
       rollups.get(key).leaves.push(it);
     });
-    // One line per unique parent SKU. Just PartNumber + QtyBase —
-    // QW pulls description, manufacturer, price from its product database.
+    // One line per unique parent SKU. QW's REST API stores whatever fields
+    // you send verbatim — it does NOT pull from the product database on POST.
     for (const rollup of rollups.values()) {
       const billableQty = rollup.isExpanded ? 1 : (Number(rollup.leaves[0].qty) || 1);
       plan.push({
         LineType: 1,
+        Manufacturer: 'CAR',
+        ManufacturerPartNumber: rollup.partNumber,
         PartNumber: rollup.partNumber,
+        Description: rollup.description,
         QtyBase: billableQty,
       });
     }
@@ -201,7 +220,10 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
       const pn = it.partNumber || (it.id ? `CAR${it.id}` : '');
       plan.push({
         LineType: 1,
+        Manufacturer: 'CAR',
+        ManufacturerPartNumber: pn,
         PartNumber: pn,
+        Description: it.description || '',
         QtyBase: Number(it.qty) || 1,
       });
     }
