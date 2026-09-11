@@ -1,0 +1,1253 @@
+{
+  "5500 with Ramps": {
+    "bundle_rec_guid": "17D912ADD0B448A3B001015C8D5088C9",
+    "name": "5500 with Ramps",
+    "items": [
+      {
+        "partNumber": "CARNA34640KT",
+        "description": "BR5500 Frame & Tilt Lift +*",
+        "vendor": "",
+        "vendorPartNumber": "CARNA34640KT",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR33989",
+        "description": "BR5500 Wide Ramp Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR33989",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR46839",
+        "description": "Lift Power Unit 220V UL T605 +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR46839",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR30774",
+        "description": "Hydraulic Oil for Power Unit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR30774",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CARNA90001",
+        "description": "Assembled Connector Power Unit Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CARNA90001",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR30948",
+        "description": "Bench Parts BR (B106) +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR30948",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR30346",
+        "description": "D16 Draw Aligner +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR30346",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "COLSW Kit-2",
+        "description": "Pump, Cyl. Complete w/ Clevis Kit",
+        "vendor": "",
+        "vendorPartNumber": "COLSW Kit-2",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR934",
+        "description": "3/8\" x 12' Chain with 1 Slip Hook +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR934",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR931",
+        "description": "3/8\" x 8' Chain w/1 Grab Hook +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR931",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR930",
+        "description": "Double Grab Hook +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR930",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR30531",
+        "description": "Single Claw Hook T18 +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR30531",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR35395",
+        "description": "E130 Chain Holder for EVO +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR35395",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR34014",
+        "description": "Pillar Jack Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR34014",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR31040",
+        "description": "Cable Guard +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR31040",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR30413",
+        "description": "D91 Down Pull for B64 +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR30413",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR90735KIT",
+        "description": "Clamp Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR90735KIT",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR30862",
+        "description": "B626 Cam Lock +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR30862",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR35188",
+        "description": "E100 Track Plate +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR35188",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0361V64A-US",
+        "description": "Light Kit-Magnetic-Rechargeable",
+        "vendor": "",
+        "vendorPartNumber": "EAK0361V64A-US",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Install",
+        "description": "System Installation",
+        "vendor": "",
+        "vendorPartNumber": "",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Training - New",
+        "description": "Vision/Bench Rack Training",
+        "vendor": "",
+        "vendorPartNumber": "",
+        "lineItemType": 1
+      }
+    ]
+  },
+  "6300 with Ramps": {
+    "bundle_rec_guid": "33E07F0EF764476F86AD6F6245B5AC11",
+    "name": "6300 with Ramps",
+    "items": [
+      {
+        "partNumber": "CAR46839",
+        "description": "Lift Power Unit 220V UL T605 +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR46839",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR30774",
+        "description": "Hydraulic Oil for Power Unit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR30774",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CARNA90001",
+        "description": "Assembled Connector Power Unit Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CARNA90001",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR30948",
+        "description": "Bench Parts BR (B106) +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR30948",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR30346",
+        "description": "D16 Draw Aligner +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR30346",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "COLSW Kit-2",
+        "description": "Pump, Cyl. Complete w/ Clevis Kit",
+        "vendor": "",
+        "vendorPartNumber": "COLSW Kit-2",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR934",
+        "description": "3/8\" x 12' Chain with 1 Slip Hook +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR934",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR931",
+        "description": "3/8\" x 8' Chain w/1 Grab Hook +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR931",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR930",
+        "description": "Double Grab Hook +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR930",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR30531",
+        "description": "Single Claw Hook T18 +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR30531",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR35395",
+        "description": "E130 Chain Holder for EVO +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR35395",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR34014",
+        "description": "Pillar Jack Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR34014",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR31040",
+        "description": "Cable Guard +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR31040",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR30413",
+        "description": "D91 Down Pull for B64 +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR30413",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR90735KIT",
+        "description": "Clamp Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR90735KIT",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR30862",
+        "description": "B626 Cam Lock +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR30862",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR35188",
+        "description": "E100 Track Plate +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR35188",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0361V64A-US",
+        "description": "Light Kit-Magnetic-Rechargeable",
+        "vendor": "",
+        "vendorPartNumber": "EAK0361V64A-US",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR33907-KIT",
+        "description": "BR6300 Frame & Tilt Lift +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR33907-KIT",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR33990",
+        "description": "Ramp Kit BR6300 +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR33990",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Install",
+        "description": "System Installation",
+        "vendor": "",
+        "vendorPartNumber": "",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Training - New",
+        "description": "Vision/Bench Rack Training",
+        "vendor": "",
+        "vendorPartNumber": "",
+        "lineItemType": 1
+      }
+    ]
+  },
+  "5500 VERSA": {
+    "bundle_rec_guid": "0A4AEB35C1AD4DDA977FF8596EFF33F2",
+    "name": "5500 VERSA",
+    "items": [
+      {
+        "partNumber": "CAR30774",
+        "description": "Hydraulic Oil for Power Unit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR30774",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CARNA90001",
+        "description": "Assembled Connector Power Unit Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CARNA90001",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR30948",
+        "description": "Bench Parts BR (B106) +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR30948",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "COLSW Kit-2",
+        "description": "Pump, Cyl. Complete w/ Clevis Kit",
+        "vendor": "",
+        "vendorPartNumber": "COLSW Kit-2",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR934",
+        "description": "3/8\" x 12' Chain with 1 Slip Hook +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR934",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR931",
+        "description": "3/8\" x 8' Chain w/1 Grab Hook +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR931",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR930",
+        "description": "Double Grab Hook +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR930",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR30531",
+        "description": "Single Claw Hook T18 +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR30531",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR35395",
+        "description": "E130 Chain Holder for EVO +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR35395",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR31040",
+        "description": "Cable Guard +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR31040",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR30413",
+        "description": "D91 Down Pull for B64 +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR30413",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR90735KIT",
+        "description": "Clamp Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR90735KIT",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR30862",
+        "description": "B626 Cam Lock +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR30862",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR35188",
+        "description": "E100 Track Plate +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR35188",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0361V64A-US",
+        "description": "Light Kit-Magnetic-Rechargeable",
+        "vendor": "",
+        "vendorPartNumber": "EAK0361V64A-US",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR51008-1-Kit",
+        "description": "BenchRack5500 VERSA\r\n\r\nIncludes:\r\nManual,\r\nLift on Wheels,\r\nT608 Power Unit,\r\nSafety Switch +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR51008-1-Kit",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR52032",
+        "description": "Pillar Jack Extension for VERSA +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR52032",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR51690",
+        "description": "Drawaligner D22 +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR51690",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Install",
+        "description": "System Installation",
+        "vendor": "",
+        "vendorPartNumber": "",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Training - New",
+        "description": "Vision/Bench Rack Training",
+        "vendor": "",
+        "vendorPartNumber": "",
+        "lineItemType": 1
+      }
+    ]
+  },
+  "6300 VERSA": {
+    "bundle_rec_guid": "76BFA4DE39D443589AE3F5393757E669",
+    "name": "6300 VERSA",
+    "items": [
+      {
+        "partNumber": "COLSW Kit-2",
+        "description": "Pump, Cyl. Complete w/ Clevis Kit",
+        "vendor": "",
+        "vendorPartNumber": "COLSW Kit-2",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR30774",
+        "description": "Hydraulic Oil for Power Unit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR30774",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CARNA90001",
+        "description": "Assembled Connector Power Unit Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CARNA90001",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR30948",
+        "description": "Bench Parts BR (B106) +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR30948",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR934",
+        "description": "3/8\" x 12' Chain with 1 Slip Hook +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR934",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR931",
+        "description": "3/8\" x 8' Chain w/1 Grab Hook +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR931",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR930",
+        "description": "Double Grab Hook +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR930",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR30531",
+        "description": "Single Claw Hook T18 +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR30531",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR35395",
+        "description": "E130 Chain Holder for EVO +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR35395",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR52032",
+        "description": "Pillar Jack Extension for VERSA +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR52032",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR31040",
+        "description": "Cable Guard +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR31040",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR30413",
+        "description": "D91 Down Pull for B64 +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR30413",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR90735KIT",
+        "description": "Clamp Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR90735KIT",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR30862",
+        "description": "B626 Cam Lock +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR30862",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR35188",
+        "description": "E100 Track Plate +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR35188",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0361V64A-US",
+        "description": "Light Kit-Magnetic-Rechargeable",
+        "vendor": "",
+        "vendorPartNumber": "EAK0361V64A-US",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR51690",
+        "description": "Drawaligner D22 +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR51690",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR51009-KIT",
+        "description": "B96 BR6300 Versa Benchrack +*\r\n\r\nKit Includes:\r\nBR6300 Versa\r\nManual\r\nLift on Wheels\r\nPower Unit\r\nSafety Switch",
+        "vendor": "",
+        "vendorPartNumber": "CAR51009-KIT",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Training - New",
+        "description": "Vision/Bench Rack Training",
+        "vendor": "",
+        "vendorPartNumber": "",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Install",
+        "description": "System Installation",
+        "vendor": "",
+        "vendorPartNumber": "",
+        "lineItemType": 1
+      }
+    ]
+  },
+  "B731 Truck Kit": {
+    "bundle_rec_guid": "8680F443CCB940ABA8D1257C59FE0727",
+    "name": "B731 Truck Kit",
+    "items": [
+      {
+        "partNumber": "CAR49944",
+        "description": "B731 Truck Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR49944",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR35892",
+        "description": "B340BR Bench Mounting Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR35892",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR49956",
+        "description": "B213 Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR49956",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR50090-KIT",
+        "description": "B731 Tool Board Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR50090-KIT",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR50089",
+        "description": "B731 Complete Tool Wagon +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR50089",
+        "lineItemType": 1
+      }
+    ]
+  },
+  "EVO1": {
+    "bundle_rec_guid": "D97C27B0D4304155B281E8B3E032AD4D",
+    "name": "EVO1",
+    "items": [
+      {
+        "partNumber": "CAR35413",
+        "description": "EVO1 Basic Sys - Anchor Hold +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR35413",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR35797",
+        "description": "Tool Board EVO1 WSE211 +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR35797",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR35816",
+        "description": "Tool Wagon excl. Tool Board WSW90 +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR35816",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR3579602",
+        "description": "Tool Board 900 Grey +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR3579602",
+        "lineItemType": 1
+      }
+    ]
+  },
+  "EVO2": {
+    "bundle_rec_guid": "41FE0CC007E947438C615D01C33461BE",
+    "name": "EVO2",
+    "items": [
+      {
+        "partNumber": "CAR35419",
+        "description": "EVO2 Extended Anchor System +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR35419",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR35800",
+        "description": "Tool Board Set EVO 2 +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR35800",
+        "lineItemType": 1
+      }
+    ]
+  },
+  "EVO3": {
+    "bundle_rec_guid": "E7FB12B3A3E349358259E2E860FC0AFA",
+    "name": "EVO3",
+    "items": [
+      {
+        "partNumber": "CAR35719",
+        "description": "EVO3 Holding Fixturing Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR35719",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR35853",
+        "description": "Tool Board Set EVO3/BMW WSE220 (complete) +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR35853",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR35816",
+        "description": "Tool Wagon excl. Tool Board WSW90 +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR35816",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR3579602",
+        "description": "Tool Board 900 Grey +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR3579602",
+        "lineItemType": 1
+      }
+    ]
+  },
+  "Vision X1": {
+    "bundle_rec_guid": "43F1F706596F414394D471A9B569CB80",
+    "name": "Vision X1",
+    "items": [
+      {
+        "partNumber": "CAR46731",
+        "description": "COT Vision X1 +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR46731",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR39635",
+        "description": "M75 Measuring Bridge, 5M +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR39635",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Supp.",
+        "description": "Chief Bridge Supports",
+        "vendor": "",
+        "vendorPartNumber": "Supp.",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Training - New",
+        "description": "Vision/Bench Rack Training",
+        "vendor": "",
+        "vendorPartNumber": "",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Computer - Vision",
+        "description": "Computer Package",
+        "vendor": "",
+        "vendorPartNumber": "",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Cover - Vision",
+        "description": "COT Cover",
+        "vendor": "",
+        "vendorPartNumber": "",
+        "lineItemType": 1
+      }
+    ]
+  },
+  "Vision X2": {
+    "bundle_rec_guid": "AEE0F66CF07645EDBBE6CBCAA7F83C01",
+    "name": "Vision X2",
+    "items": [
+      {
+        "partNumber": "CAR39635",
+        "description": "M75 Measuring Bridge, 5M +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR39635",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Supp.",
+        "description": "Chief Bridge Supports",
+        "vendor": "",
+        "vendorPartNumber": "Supp.",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Training - New",
+        "description": "Vision/Bench Rack Training",
+        "vendor": "",
+        "vendorPartNumber": "",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Computer - Vision",
+        "description": "Computer Package",
+        "vendor": "",
+        "vendorPartNumber": "",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Cover - Vision",
+        "description": "COT Cover",
+        "vendor": "",
+        "vendorPartNumber": "",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR46732",
+        "description": "MC22 COT Vision 2 X 2 +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR46732",
+        "lineItemType": 1
+      }
+    ]
+  },
+  "Vision X3": {
+    "bundle_rec_guid": "DD4A3424E26E405EBCFF5A927B8B7C9C",
+    "name": "Vision X3",
+    "items": [
+      {
+        "partNumber": "CAR39635",
+        "description": "M75 Measuring Bridge, 5M +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR39635",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Supp.",
+        "description": "Chief Bridge Supports",
+        "vendor": "",
+        "vendorPartNumber": "Supp.",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Training - New",
+        "description": "Vision/Bench Rack Training",
+        "vendor": "",
+        "vendorPartNumber": "",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Computer - Vision",
+        "description": "Computer Package",
+        "vendor": "",
+        "vendorPartNumber": "",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Cover - Vision",
+        "description": "COT Cover",
+        "vendor": "",
+        "vendorPartNumber": "",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR46733",
+        "description": "Vision 2, X 3 Electronic Measuring +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR46733",
+        "lineItemType": 1
+      }
+    ]
+  },
+  "CTR9 Spot Welder": {
+    "bundle_rec_guid": "1C16A1438E6F4EDF9BEE9A219E6E219E",
+    "name": "CTR9 Spot Welder",
+    "items": [
+      {
+        "partNumber": "CARNA90576",
+        "description": "CTR9-STRSW 208V Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CARNA90576",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR47033",
+        "description": "Electrode 13mm Caps 10pk +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR47033",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR41919",
+        "description": "Electrode Cap Dresser-13mm +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR41919",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR52031",
+        "description": "A-Tong - automatic, water cooled +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR52031",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR50300",
+        "description": "CTR9 Accessories - Kit 1(Shelf Kit) +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR50300",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR49905",
+        "description": "KIT MFG MULTI-FUN CTR7,9,12 +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR49905",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR49108",
+        "description": "MFG Adapter for CTR9 Only +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR49108",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Training STRW",
+        "description": "Spot Welder Training",
+        "vendor": "",
+        "vendorPartNumber": "",
+        "lineItemType": 1
+      }
+    ]
+  },
+  "CMI300 Trio": {
+    "bundle_rec_guid": "AAA6C7458C5F4F23AA64BF478E866A23",
+    "name": "CMI300 Trio",
+    "items": [
+      {
+        "partNumber": "CARNA90573",
+        "description": "CMI300 Trio Pulse Boost Welder +*",
+        "vendor": "",
+        "vendorPartNumber": "CARNA90573",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CARNA-90586",
+        "description": "ML240 Twist 3m 0.8mmFe (Blue) +*",
+        "vendor": "",
+        "vendorPartNumber": "CARNA-90586",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR34347",
+        "description": "0.8 Feed Wheel +*S",
+        "vendor": "",
+        "vendorPartNumber": "CAR34347 (Formerly CAR73940054)",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CARNA-90587",
+        "description": "ML240 Twist 3m 1.2mm TeflonFE +*",
+        "vendor": "",
+        "vendorPartNumber": "CARNA-90587",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR47994",
+        "description": "1.2MM Feed Rolls +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR47994",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "ATC555405047",
+        "description": "MIG Wire 3/64\" SO Aluminum 1.2 - 5554 5LB **C**",
+        "vendor": "",
+        "vendorPartNumber": "ATC555405047",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "804711",
+        "description": ".030 Steel MIG Wire spl(11) *C*",
+        "vendor": "",
+        "vendorPartNumber": "804711",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "863747",
+        "description": "Wire Mig .030 Silicon Bronze\r\n10lb Spool 00SIBE5 **C**",
+        "vendor": "",
+        "vendorPartNumber": "863747",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "RAD64003040",
+        "description": "Flowmeter Regulator **C**",
+        "vendor": "",
+        "vendorPartNumber": "RAD64003040",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "WES411",
+        "description": "Y Connector **C**",
+        "vendor": "",
+        "vendorPartNumber": "WES411",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Training CMI",
+        "description": "Pulse MIG Welder Training",
+        "vendor": "",
+        "vendorPartNumber": "",
+        "lineItemType": 1
+      }
+    ]
+  },
+  "CMI300 Duo": {
+    "bundle_rec_guid": "D60B733A6F2548FE9E4F028040A0A587",
+    "name": "CMI300 Duo",
+    "items": [
+      {
+        "partNumber": "CARNA-90586",
+        "description": "ML240 Twist 3m 0.8mmFe (Blue) +*",
+        "vendor": "",
+        "vendorPartNumber": "CARNA-90586",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR34347",
+        "description": "0.8 Feed Wheel +*S",
+        "vendor": "",
+        "vendorPartNumber": "CAR34347 (Formerly CAR73940054)",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CARNA-90587",
+        "description": "ML240 Twist 3m 1.2mm TeflonFE +*",
+        "vendor": "",
+        "vendorPartNumber": "CARNA-90587",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR47994",
+        "description": "1.2MM Feed Rolls +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR47994",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "ATC555405047",
+        "description": "MIG Wire 3/64\" SO Aluminum 1.2 - 5554 5LB **C**",
+        "vendor": "",
+        "vendorPartNumber": "ATC555405047",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "863747",
+        "description": "Wire Mig .030 Silicon Bronze\r\n10lb Spool 00SIBE5 **C**",
+        "vendor": "",
+        "vendorPartNumber": "863747",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "RAD64003040",
+        "description": "Flowmeter Regulator **C**",
+        "vendor": "",
+        "vendorPartNumber": "RAD64003040",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "WES411",
+        "description": "Y Connector **C**",
+        "vendor": "",
+        "vendorPartNumber": "WES411",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Training CMI",
+        "description": "Pulse MIG Welder Training",
+        "vendor": "",
+        "vendorPartNumber": "",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CARNA90574",
+        "description": "CMI300 Duo Pulse Boost Welder +*",
+        "vendor": "",
+        "vendorPartNumber": "CARNA90574",
+        "lineItemType": 1
+      }
+    ]
+  },
+  "Speed - Lift Only": {
+    "bundle_rec_guid": "A9EE4EB2D0CA4FB281E4C1F0B619E504",
+    "name": "Speed - Lift Only",
+    "items": [
+      {
+        "partNumber": "CAR50802-KIT",
+        "description": "BS15 Speed 3TKIT, Cpl with Lift +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR50802-KIT",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR46839",
+        "description": "Lift Power Unit 220V UL T605 +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR46839",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR30774",
+        "description": "Hydraulic Oil for Power Unit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR30774",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CARNA90001",
+        "description": "Assembled Connector Power Unit Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CARNA90001",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR31040",
+        "description": "Cable Guard +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR31040",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR32868",
+        "description": "60mm Height Extension +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR32868",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Install",
+        "description": "System Installation",
+        "vendor": "",
+        "vendorPartNumber": "",
+        "lineItemType": 1
+      }
+    ]
+  },
+  "Speed - Complete": {
+    "bundle_rec_guid": "156EBBF666D0478AB839A84C6BBF79BA",
+    "name": "Speed - Complete",
+    "items": [
+      {
+        "partNumber": "CAR50802-KIT",
+        "description": "BS15 Speed 3TKIT, Cpl with Lift +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR50802-KIT",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR46839",
+        "description": "Lift Power Unit 220V UL T605 +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR46839",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR30774",
+        "description": "Hydraulic Oil for Power Unit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR30774",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CARNA90001",
+        "description": "Assembled Connector Power Unit Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CARNA90001",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR31040",
+        "description": "Cable Guard +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR31040",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR32868",
+        "description": "60mm Height Extension +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR32868",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Install",
+        "description": "System Installation",
+        "vendor": "",
+        "vendorPartNumber": "",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR40850",
+        "description": "B661 Speed Bench Part +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR40850",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR33045",
+        "description": "D20 Drawaligner (5Ton) +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR33045",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR725",
+        "description": "Pump, Hose & Cylinder Set (5 Ton) +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR725",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR33001",
+        "description": "Side Pull Support for Speed +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR33001",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR32992",
+        "description": "Down Pull for Speed +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR32992",
+        "lineItemType": 1
+      }
+    ]
+  }
+}

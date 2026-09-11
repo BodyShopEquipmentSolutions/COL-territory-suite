@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="theme-color" content="#0b3d91"/>
+<title>Car-O-Liner SW Parts Audit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f5f7; --panel:#fff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0;
+  --brand:#0b3d91; --brand-2:#1e64d0; --ok:#0f9d58; --warn:#e0a800; --miss:#d93025;
+  --shadow:0 1px 2px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.06);
+  --radius:12px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink);-webkit-tap-highlight-color:transparent}
+button{font-family:inherit}
+a{color:var(--brand-2);text-decoration:none}
+header{position:sticky;top:0;background:var(--brand);color:#fff;padding:12px 14px;z-index:20;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+header .row{display:flex;align-items:center;gap:10px}
+header .title{font-weight:700;font-size:18px;letter-spacing:.2px}
+header .sub{font-size:11px;opacity:.85}
+main{padding:12px 14px 120px;max-width:1000px;margin:0 auto}
+.card{background:var(--panel);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px;margin-bottom:12px}
+input,select,textarea{font-family:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;width:100%;background:#fff;color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--brand-2);box-shadow:0 0 0 3px rgba(30,100,208,.15)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 14px;border-radius:10px;border:1px solid transparent;background:var(--brand);color:#fff;font-weight:600;font-size:14px;cursor:pointer}
+.btn:hover{background:#0d4bb0}
+.btn.sec{background:#fff;color:var(--ink);border-color:var(--line)}
+.btn.sec:hover{background:#f8fafc}
+.btn.warn{background:var(--miss)}
+.btn.ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.35)}
+.btn.ghost:hover{background:rgba(255,255,255,.1)}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;background:#eef2ff;color:#3730a3}
+.chip.ok{background:#e6f4ea;color:var(--ok)}
+.chip.miss{background:#fce8e6;color:var(--miss)}
+.chip.warn{background:#fef7e0;color:#8a6d02}
+.list{list-style:none;padding:0;margin:0}
+.results a{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border-bottom:1px solid var(--line);color:var(--ink);text-decoration:none}
+.results a:hover{background:#f8fafc}
+.results .row-thumb{width:64px;height:64px;background:#f1f5f9;border-radius:8px;flex-shrink:0;background-size:contain;background-repeat:no-repeat;background-position:center;border:1px solid var(--line)}
+.results .row-thumb.empty{background:#eef2ff;border:2px dashed var(--brand-2);display:flex;align-items:center;justify-content:center;color:var(--brand);font-size:22px}
+.results .row-body{flex:1;min-width:0}
+.results .id{font-weight:600;color:var(--brand);font-size:13px}
+.results .name{font-size:14px;line-height:1.3}
+.results .meta{font-size:11px;color:var(--muted);margin-top:2px}
+.tabs{display:flex;gap:4px;margin-bottom:10px;border-bottom:1px solid var(--line)}
+.tab{padding:8px 12px;font-size:13px;font-weight:600;border:none;background:transparent;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer}
+.tab.active{color:var(--brand);border-color:var(--brand)}
+.assembly-head{display:block}
+.assembly-head .hero{width:100%;aspect-ratio:16/9;background:#f8fafc;border-radius:10px;background-size:contain;background-repeat:no-repeat;background-position:center;border:1px solid var(--line);margin-bottom:10px;position:relative;cursor:pointer}
+.assembly-head .hero.add-photo{background:#eef2ff;border:2px dashed var(--brand-2);display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--brand);font-weight:600;gap:8px}
+.assembly-head .hero.add-photo .cam{font-size:36px}
+.assembly-head .hero .field-badge{position:absolute;top:8px;right:8px;background:var(--ok);color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.assembly-head .info{flex:1;min-width:0}
+.assembly-head .pop{font-size:13px;color:var(--muted);font-weight:600}
+.assembly-head .name{font-size:17px;font-weight:700;line-height:1.25;margin:2px 0}
+.assembly-head .id-price{font-size:12px;color:var(--muted);margin-top:4px}
+.audit-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0 8px}
+.audit-toolbar .search-wrap{flex:1;min-width:180px}
+.progress{height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;margin:4px 0 8px}
+.progress > i{display:block;height:100%;background:var(--ok);transition:width .3s}
+.parts-list{padding:0;margin:0;list-style:none}
+.part{display:flex;align-items:center;gap:10px;padding:10px 8px;border-bottom:1px solid var(--line);cursor:pointer;-webkit-user-select:none;user-select:none}
+.part:last-child{border-bottom:none}
+.part:active{background:#f1f5f9}
+.part.checked{opacity:.55}
+.part .cbwrap{width:26px;height:26px;flex-shrink:0;border:2px solid var(--line);border-radius:6px;display:flex;align-items:center;justify-content:center;background:#fff}
+.part.checked .cbwrap{background:var(--ok);border-color:var(--ok)}
+.part.checked .cbwrap::after{content:"";width:6px;height:12px;border:solid #fff;border-width:0 3px 3px 0;transform:rotate(45deg);margin-top:-3px}
+.part .thumb{width:44px;height:44px;background:#f1f5f9;border-radius:6px;flex-shrink:0;background-size:contain;background-repeat:no-repeat;background-position:center;position:relative;cursor:pointer}
+.part .thumb.add-photo{background:#eef2ff;border:2px dashed var(--brand-2);display:flex;align-items:center;justify-content:center}
+.part .thumb.add-photo:hover{background:#dbeafe}
+.part .thumb .cam{font-size:20px;line-height:1}
+.part .thumb.field{box-shadow:0 0 0 2px var(--ok)}
+.part .thumb .field-badge{position:absolute;top:-4px;right:-4px;background:var(--ok);color:#fff;font-size:9px;width:14px;height:14px;line-height:14px;text-align:center;border-radius:50%;border:2px solid #fff}
+.part .info{flex:1;min-width:0}
+.part .pn{font-size:12px;color:var(--brand);font-weight:600}
+.part .pop{font-size:11px;color:var(--muted);font-weight:600}
+.part .desc{font-size:14px;line-height:1.25}
+.part .qty{font-size:13px;font-weight:700;color:var(--ink);background:#eef2ff;padding:2px 8px;border-radius:999px;flex-shrink:0}
+.part.checked .qty{background:#e6f4ea;color:var(--ok)}
+.summary{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);box-shadow:0 -4px 16px rgba(15,23,42,.08);padding:10px 14px;z-index:30}
+.summary .row{display:flex;align-items:center;gap:10px;max-width:1000px;margin:0 auto}
+.summary .stat{font-size:13px;font-weight:600}
+.summary .stat span{display:block;font-size:11px;color:var(--muted);font-weight:400}
+.summary .stat.miss{color:var(--miss)}
+.summary .stat.ok{color:var(--ok)}
+.summary .spacer{flex:1}
+.crumbs{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);margin-bottom:6px;flex-wrap:wrap}
+.crumbs a{color:var(--brand)}
+.crumbs .sep{color:var(--muted)}
+.hint{font-size:12px;color:var(--muted);margin:4px 0 10px}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.pill{padding:4px 10px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px;font-weight:600;border:none;cursor:pointer}
+.pill.active{background:var(--brand);color:#fff}
+.big-input{font-size:17px;padding:14px 14px}
+dialog{border:none;border-radius:14px;padding:0;max-width:520px;width:calc(100vw - 32px);box-shadow:0 20px 60px rgba(0,0,0,.3)}
+dialog::backdrop{background:rgba(15,23,42,.5)}
+.dlg-head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+.dlg-body{padding:14px 16px;max-height:60vh;overflow:auto}
+.dlg-actions{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+.copy-out{width:100%;height:180px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;border:1px solid var(--line);border-radius:8px;padding:10px;background:#f8fafc}
+.family-badge{display:inline-block;font-size:10px;background:#f1f5f9;color:var(--muted);padding:2px 6px;border-radius:4px;margin-left:4px}
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.error-banner{background:#fce8e6;color:var(--miss);padding:8px 12px;border-radius:8px;margin-bottom:10px;font-size:13px}
+@media (min-width:720px){
+  .part .thumb{width:56px;height:56px}
+  .part .desc{font-size:15px}
+}
+@media print{
+  header,.summary,.audit-toolbar,.tabs,.filter-row,.crumbs,.no-print{display:none !important}
+  main{padding:0;max-width:none}
+  .card{box-shadow:none;border:1px solid #ccc;page-break-inside:avoid}
+  .part{page-break-inside:avoid;padding:6px 4px}
+  body{background:#fff}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="row">
+    <div style="flex:1">
+      <div class="title">Car-O-Liner SW Parts Audit</div>
+      <div class="sub" id="header-sub">Loading catalog…</div>
+    </div>
+    <a class="btn ghost" href="../" style="text-decoration:none">← Suite</a>
+    <button class="btn ghost" onclick="go('home')">Home</button>
+    <button class="btn ghost no-print" title="Save audit progress to a file" onclick="saveAuditFile()">Save</button>
+    <button class="btn ghost no-print" title="Load saved audit from a file" onclick="loadAuditFile()">Load</button>
+  </div>
+</header>
+<main id="app">
+  <div class="card"><div class="empty">Loading…</div></div>
+</main>
+<div class="summary" id="summary" style="display:none">
+  <div class="row">
+    <div class="stat ok" id="stat-have"><span>Present</span>0</div>
+    <div class="stat miss" id="stat-missing"><span>Missing</span>0</div>
+    <div class="spacer"></div>
+    <button class="btn sec no-print" onclick="exportMissing()">Missing List</button>
+    <button class="btn no-print" onclick="exportQuoteWerks()">QuoteWerks</button>
+  </div>
+</div>
+
+<dialog id="export-dlg">
+  <div class="dlg-head">
+    <strong id="dlg-title">Export</strong>
+    <button class="btn sec" onclick="document.getElementById('export-dlg').close()">Close</button>
+  </div>
+  <div class="dlg-body">
+    <div class="hint" id="dlg-hint"></div>
+    <textarea class="copy-out" id="dlg-content"></textarea>
+  </div>
+  <div class="dlg-actions">
+    <button class="btn sec" onclick="dlgCopy()">Copy</button>
+    <button class="btn" onclick="dlgDownload()">Download .csv</button>
+  </div>
+</dialog>
+
+<script>
+const IMG_BASE = "https://cdn1.gung.io/fit-in/300x300/caroliner/images/";
+// Field-photo backend disabled on Netlify (no server). Kept as no-op stubs below.
+const API = null;
+let CONTACTS = [];
+let SELECTED_CUSTOMER = null;
+let ASSEMBLIES = [];
+let PARTS = [];
+let ASSEMBLY_BY_ID = {};
+let PART_BY_ID = {};
+let FIELD_PHOTOS = {}; // { partId: {url, uploaded_at} }
+let currentAssembly = null;
+let checkState = {}; // { assemblyId: { partId: qtyChecked } }
+let currentFilter = 'all'; // all | missing | present
+let currentTab = 'assemblies'; // assemblies | search
+
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+
+// Router
+window.addEventListener('hashchange', route);
+window.addEventListener('load', init);
+
+async function init() {
+  try {
+    const [aRes, pRes, fpRes] = await Promise.all([
+      fetch('assemblies.json'),
+      fetch('parts_index.json'),
+      fetch(API + '/api/photos').catch(() => null)
+    ]);
+    ASSEMBLIES = await aRes.json();
+    PARTS = await pRes.json();
+    ASSEMBLY_BY_ID = Object.fromEntries(ASSEMBLIES.map(a => [a.id, a]));
+    PART_BY_ID = Object.fromEntries(PARTS.map(p => [p.id, p]));
+    if (fpRes && fpRes.ok) FIELD_PHOTOS = await fpRes.json();
+    // In-memory only (preview iframe blocks storage). Use Save/Load buttons for persistence.
+    checkState = {};
+    $('#header-sub').textContent = `${ASSEMBLIES.length} assemblies · ${PARTS.length} parts · ${Object.keys(FIELD_PHOTOS).length} field photos`;
+    route();
+  } catch(e) {
+    $('#app').innerHTML = '<div class="card"><div class="error-banner">Failed to load catalog: '+e.message+'</div></div>';
+  }
+}
+
+function route() {
+  const h = location.hash.slice(1) || 'home';
+  const [view, ...rest] = h.split('/');
+  if (view === 'a' && rest[0]) return renderAssembly(rest[0]);
+  if (view === 'p' && rest[0]) return renderPart(rest[0]);
+  return renderHome();
+}
+
+function go(where) {
+  location.hash = where === 'home' ? '' : where;
+}
+
+// ============ HOME ============
+function renderHome() {
+  currentAssembly = null;
+  $('#summary').style.display = 'none';
+  const query = new URLSearchParams(location.search).get('q') || '';
+  const app = $('#app');
+  app.innerHTML = `
+    <div class="card">
+      <div class="tabs">
+        <button class="tab ${currentTab==='assemblies'?'active':''}" onclick="setTab('assemblies')">Assemblies (${ASSEMBLIES.length})</button>
+        <button class="tab ${currentTab==='search'?'active':''}" onclick="setTab('search')">All Parts (${PARTS.length})</button>
+      </div>
+      <input class="big-input" id="q" placeholder="${currentTab==='assemblies' ? 'Search EVO1, B731, CTR9, Vision, PointX…' : 'Search any part by number, name, family…'}" value="${escapeHtml(query)}" oninput="onSearch(this.value)"/>
+      <div class="filter-row" id="filter-row"></div>
+    </div>
+    <div class="card" style="padding:0">
+      <div class="results list" id="results"></div>
+    </div>
+  `;
+  $('#q').focus();
+  onSearch(query);
+}
+
+function setTab(t) {
+  currentTab = t;
+  renderHome();
+}
+
+function onSearch(q) {
+  const results = $('#results');
+  q = (q || '').trim().toLowerCase();
+  let items;
+  if (currentTab === 'assemblies') {
+    items = ASSEMBLIES;
+    if (q) {
+      const toks = q.split(/\s+/);
+      items = items.filter(a => {
+        const hay = [a.id, a.pop, a.desc, a.family, a.itemNumber].join(' ').toLowerCase();
+        return toks.every(t => hay.includes(t));
+      });
+    }
+    // Group by family
+    items.sort((a,b) => (b.parts.length||0) - (a.parts.length||0));
+    results.innerHTML = items.slice(0, 400).map(a => {
+      const url = assemblyHeroUrl(a);
+      const thumb = url ? `<div class="row-thumb" style="background-image:url('${url}')"></div>` : `<div class="row-thumb empty">📷</div>`;
+      return `
+      <a href="#a/${encodeURIComponent(a.id)}">
+        ${thumb}
+        <div class="row-body">
+          <div class="id">${escapeHtml(a.itemNumber || a.id)}${a.pop && a.pop !== a.desc ? ' · '+escapeHtml(a.pop) : ''}</div>
+          <div class="name">${escapeHtml(a.desc || a.id)}</div>
+          <div class="meta">
+            <span class="chip">${a.parts.length} parts</span>
+            ${a.addons.length ? `<span class="chip warn">${a.addons.length} add-ons</span>` : ''}
+            ${a.listPrice ? `<span style="margin-left:8px">$${formatMoney(a.listPrice)}</span>` : ''}
+            ${a.family ? `<span class="family-badge">${escapeHtml(a.family)}</span>` : ''}
+          </div>
+        </div>
+      </a>`;
+    }).join('') || '<div class="empty">No matching assemblies. Try B731, EVO1, CTR9, Vision, PointX…</div>';
+    if (items.length > 400) results.insertAdjacentHTML('beforeend',`<div class="empty">Showing 400 of ${items.length}. Refine search.</div>`);
+  } else {
+    items = PARTS;
+    if (q) {
+      const toks = q.split(/\s+/);
+      items = items.filter(p => {
+        const hay = [p.id, p.pop, p.desc, p.family, p.itemNumber].join(' ').toLowerCase();
+        return toks.every(t => hay.includes(t));
+      });
+    } else {
+      items = items.filter(p => p.hasParts);
+    }
+    results.innerHTML = items.slice(0, 300).map(p => {
+      const url = partThumbUrl(p);
+      const thumb = url ? `<div class="row-thumb" style="background-image:url('${url}')"></div>` : `<div class="row-thumb empty">📷</div>`;
+      return `
+      <a href="#p/${encodeURIComponent(p.id)}">
+        ${thumb}
+        <div class="row-body">
+          <div class="id">${escapeHtml(p.itemNumber || p.id)}${p.pop ? ' · '+escapeHtml(p.pop) : ''}</div>
+          <div class="name">${escapeHtml(p.desc || p.id)}</div>
+          <div class="meta">
+            ${p.hasParts ? '<span class="chip">assembly</span>' : ''}
+            ${p.hasAddons ? '<span class="chip warn">has add-ons</span>' : ''}
+            ${p.listPrice ? `<span style="margin-left:8px">$${formatMoney(p.listPrice)}</span>` : ''}
+            ${p.family ? `<span class="family-badge">${escapeHtml(p.family)}</span>` : ''}
+          </div>
+        </div>
+      </a>`;
+    }).join('') || '<div class="empty">No matching parts.</div>';
+    if (items.length > 300) results.insertAdjacentHTML('beforeend',`<div class="empty">Showing 300 of ${items.length}. Refine search.</div>`);
+  }
+}
+
+// ============ ASSEMBLY VIEW ============
+function renderAssembly(id) {
+  const a = ASSEMBLY_BY_ID[id];
+  if (!a) { $('#app').innerHTML = '<div class="card"><div class="error-banner">Assembly '+escapeHtml(id)+' not found.</div></div>'; return; }
+  currentAssembly = a;
+  $('#summary').style.display = '';
+  checkState[a.id] = checkState[a.id] || {};
+
+  const state = checkState[a.id];
+  const app = $('#app');
+  app.innerHTML = `
+    <div class="crumbs">
+      <a href="#">All assemblies</a>
+      <span class="sep">›</span>
+      <span>${escapeHtml(a.itemNumber || a.id)}</span>
+    </div>
+    <div class="card">
+      <div class="assembly-head">
+        ${renderHero(a)}
+        <div class="info">
+          <div class="pop">${escapeHtml(a.pop || '')}</div>
+          <div class="name">${escapeHtml(a.desc || a.id)}</div>
+          <div class="id-price">${escapeHtml(a.itemNumber || a.id)}${a.listPrice ? ' · $'+formatMoney(a.listPrice) : ''}${a.weight ? ' · '+a.weight+' kg' : ''}${a.replaces ? ' · replaces '+escapeHtml(a.replaces) : ''}</div>
+        </div>
+      </div>
+      <div class="progress"><i id="prog"></i></div>
+      <div class="audit-toolbar">
+        <div class="search-wrap"><input id="part-filter" placeholder="Filter parts…" oninput="filterParts(this.value)"/></div>
+        <button class="pill ${currentFilter==='all'?'active':''}" onclick="setFilter('all')">All</button>
+        <button class="pill ${currentFilter==='missing'?'active':''}" onclick="setFilter('missing')">Missing</button>
+        <button class="pill ${currentFilter==='present'?'active':''}" onclick="setFilter('present')">Present</button>
+      </div>
+      <div class="hint">Tap a part to toggle. Long-press to enter partial qty. Progress saved on this device.</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+        <button class="btn sec" onclick="markAll(true)">✓ Mark all present</button>
+        <button class="btn sec" onclick="markAll(false)">Clear all</button>
+        <button class="btn sec no-print" onclick="window.print()">🖨 Print</button>
+      </div>
+      <ul class="parts-list" id="parts"></ul>
+    </div>
+    ${a.addons.length ? renderAddonsSection(a) : ''}
+  `;
+  renderParts();
+}
+
+function renderAddonsSection(a) {
+  return `
+    <div class="card">
+      <h3 style="margin:0 0 8px;font-size:15px">Optional add-ons (${a.addons.length})</h3>
+      <div class="hint">These are variant/companion products the SIM lists for this assembly. Not counted in the audit.</div>
+      <ul class="parts-list">
+        ${a.addons.map(x => `
+          <li class="part" style="cursor:default" onclick="event.stopPropagation()">
+            <div class="thumb" style="background-image:url('${imgUrl(x.img)}')"></div>
+            <div class="info">
+              <div class="pn">${escapeHtml(x.itemNumber || x.id)}${x.pop ? ' · '+escapeHtml(x.pop) : ''}</div>
+              <div class="desc">${escapeHtml(x.desc || x.id)}</div>
+              ${x.listPrice ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">$${formatMoney(x.listPrice)}</div>` : ''}
+            </div>
+          </li>
+        `).join('')}
+      </ul>
+    </div>
+  `;
+}
+
+function setFilter(f) {
+  currentFilter = f;
+  renderAssembly(currentAssembly.id);
+}
+
+function filterParts(q) {
+  q = (q||'').trim().toLowerCase();
+  const parts = currentAssembly.parts;
+  $$('#parts .part').forEach(li => {
+    const pid = li.dataset.pid;
+    const part = parts.find(p => p.id === pid);
+    const hay = [part.id, part.pop, part.desc, part.itemNumber].join(' ').toLowerCase();
+    li.style.display = (!q || hay.includes(q)) ? '' : 'none';
+  });
+}
+
+function renderParts() {
+  const a = currentAssembly;
+  const state = checkState[a.id];
+  const list = $('#parts');
+  const items = a.parts.filter(p => {
+    const done = (state[p.id]||0) >= p.qty;
+    if (currentFilter === 'missing') return !done;
+    if (currentFilter === 'present') return done;
+    return true;
+  });
+  list.innerHTML = items.map(p => {
+    const done = (state[p.id]||0) >= p.qty;
+    const partial = (state[p.id]||0) > 0 && !done;
+    const thumb = partThumbUrl(p);
+    const hasFieldPhoto = !!FIELD_PHOTOS[p.id];
+    const noPhoto = !thumb;
+    return `
+      <li class="part ${done?'checked':''}" data-pid="${escapeHtml(p.id)}">
+        <div class="cbwrap" onclick="togglePart('${escapeHtml(p.id)}')"></div>
+        <div class="thumb ${noPhoto?'add-photo':''} ${hasFieldPhoto?'field':''}" 
+             style="${thumb?`background-image:url('${thumb}')`:''}" 
+             onclick="openCamera('${escapeHtml(p.id)}')" 
+             title="${noPhoto?'Tap to add a photo':'Tap to replace photo'}">
+             ${noPhoto?'<span class="cam">📷</span>':''}
+             ${hasFieldPhoto?'<span class="field-badge" title="Field photo">●</span>':''}
+        </div>
+        <div class="info" onclick="togglePart('${escapeHtml(p.id)}')"
+             oncontextmenu="event.preventDefault();editQty('${escapeHtml(p.id)}');return false"
+             ontouchstart="startPress('${escapeHtml(p.id)}')"
+             ontouchend="cancelPress()"
+             ontouchmove="cancelPress()">
+          <div class="pn">${escapeHtml(p.itemNumber || p.id)}${p.pop ? ' · '+escapeHtml(p.pop) : ''}</div>
+          <div class="desc">${escapeHtml(p.desc || p.id)}</div>
+          ${partial ? `<div style="font-size:11px;color:var(--warn);font-weight:600">${state[p.id]} of ${p.qty} present</div>` : ''}
+          ${p.listPrice ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">$${formatMoney(p.listPrice)} ea</div>` : ''}
+        </div>
+        <div class="qty" onclick="togglePart('${escapeHtml(p.id)}')">${p.qty}</div>
+      </li>
+    `;
+  }).join('') || '<li class="empty">No parts match filter.</li>';
+  updateSummary();
+}
+
+let pressTimer = null;
+function startPress(pid) {
+  cancelPress();
+  pressTimer = setTimeout(() => { pressTimer = null; editQty(pid); }, 600);
+}
+function cancelPress() { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } }
+
+function togglePart(pid) {
+  if (pressTimer === null && arguments.callee.caller && arguments.callee.caller.name === '') {} // no-op
+  const a = currentAssembly; const state = checkState[a.id];
+  const p = a.parts.find(x => x.id === pid);
+  if (!p) return;
+  const cur = state[pid] || 0;
+  state[pid] = cur >= p.qty ? 0 : p.qty;
+  saveState();
+  renderParts();
+}
+
+function editQty(pid) {
+  const a = currentAssembly; const state = checkState[a.id];
+  const p = a.parts.find(x => x.id === pid);
+  if (!p) return;
+  const cur = state[pid] || 0;
+  const ans = prompt(`How many of "${p.desc}" are present? (required: ${p.qty})`, cur);
+  if (ans === null) return;
+  const n = Math.max(0, Math.min(p.qty, parseInt(ans)||0));
+  state[pid] = n;
+  saveState();
+  renderParts();
+}
+
+function markAll(present) {
+  const a = currentAssembly; const state = checkState[a.id];
+  a.parts.forEach(p => { state[p.id] = present ? p.qty : 0; });
+  saveState();
+  renderParts();
+}
+
+function updateSummary() {
+  const a = currentAssembly;
+  if (!a) return;
+  const state = checkState[a.id];
+  let have = 0, miss = 0;
+  a.parts.forEach(p => {
+    const c = state[p.id] || 0;
+    have += c;
+    miss += (p.qty - c);
+  });
+  $('#stat-have').innerHTML = `<span>Present (units)</span>${have}`;
+  $('#stat-missing').innerHTML = `<span>Missing (units)</span>${miss}`;
+  const totalReq = a.parts.reduce((s,p)=>s+p.qty,0);
+  $('#prog').style.width = totalReq ? (have/totalReq*100)+'%' : '0';
+}
+
+function saveState() { /* in-memory only */ }
+
+function saveAuditFile() {
+  const blob = new Blob([JSON.stringify(checkState,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'col_audit_'+new Date().toISOString().slice(0,10)+'.json'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// =========== FIELD PHOTO CAPTURE ==========
+function openCamera(partId) {
+  const p = currentAssembly ? currentAssembly.parts.find(x => x.id === partId) : PART_BY_ID[partId];
+  const desc = p ? (p.desc || partId) : partId;
+  const fp = FIELD_PHOTOS[partId];
+  if (fp) {
+    // Photo already exists — give options
+    const opts = confirm(`${desc}\n\nField photo already uploaded ${new Date(fp.uploaded_at).toLocaleString()}.\n\nOK = replace with new photo\nCancel = keep current`);
+    if (!opts) return;
+  }
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'image/*';
+  inp.capture = 'environment'; // rear camera on phones
+  inp.onchange = async e => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    await uploadPhoto(partId, file, desc);
+  };
+  inp.click();
+}
+
+async function uploadPhoto(partId, file, desc) {
+  try {
+    showToast(`Compressing photo for ${partId}…`);
+    const dataUrl = await resizeToDataUrl(file, 1200, 0.82);
+    showToast(`Uploading photo for ${partId}…`);
+    const res = await fetch(API + '/api/photos', {
+      method: 'POST',
+      headers: {'content-type':'application/json'},
+      body: JSON.stringify({part_id: partId, data_url: dataUrl})
+    });
+    if (!res.ok) { const t = await res.text(); throw new Error(`HTTP ${res.status}: ${t}`); }
+    const info = await res.json();
+    FIELD_PHOTOS[partId] = {url: info.url, uploaded_at: info.uploaded_at};
+    showToast(`✓ Uploaded photo for ${desc}`);
+    if (currentAssembly) renderParts();
+  } catch(e) {
+    showToast('Upload failed: '+e.message, true);
+  }
+}
+
+function resizeToDataUrl(file, maxDim, quality) {
+  return new Promise((resolve, reject) => {
+    const rd = new FileReader();
+    rd.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let {width:w, height:h} = img;
+        if (w > maxDim || h > maxDim) {
+          const s = Math.min(maxDim/w, maxDim/h);
+          w = Math.round(w*s); h = Math.round(h*s);
+        }
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = rd.result;
+    };
+    rd.onerror = reject;
+    rd.readAsDataURL(file);
+  });
+}
+
+function showToast(msg, isError) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:10px 18px;border-radius:24px;font-size:13px;font-weight:600;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:80vw;text-align:center';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.background = isError ? 'var(--miss)' : '#0f172a';
+  t.style.display = 'block';
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.style.display = 'none', 2800);
+}
+
+function downloadPhotosZip() {
+  const n = Object.keys(FIELD_PHOTOS).length;
+  if (!n) { alert('No field photos uploaded yet.'); return; }
+  showToast(`Bundling ${n} photo${n>1?'s':''} for download…`);
+  window.location.href = API + '/api/photos.zip';
+}
+
+function loadAuditFile() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'application/json,.json';
+  inp.onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => {
+      try { checkState = JSON.parse(rd.result); route(); }
+      catch(err) { alert('Could not load file: '+err.message); }
+    };
+    rd.readAsText(f);
+  };
+  inp.click();
+}
+
+// ============ PART VIEW (jump to assembly if it is one) ============
+function renderPart(id) {
+  if (ASSEMBLY_BY_ID[id]) return renderAssembly(id);
+  const p = PART_BY_ID[id];
+  if (!p) { $('#app').innerHTML = '<div class="card"><div class="error-banner">Part '+escapeHtml(id)+' not found.</div></div>'; return; }
+  // Find assemblies containing this part
+  const uses = ASSEMBLIES.filter(a => a.parts.some(x => x.id === id));
+  $('#app').innerHTML = `
+    <div class="crumbs"><a href="#">Back</a></div>
+    <div class="card">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="width:80px;height:80px;background:#f1f5f9;border-radius:8px;flex-shrink:0;background-size:contain;background-repeat:no-repeat;background-position:center;background-image:url('${partThumbUrl(p)}')"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;color:var(--muted);font-weight:600">${escapeHtml(p.pop||'')}</div>
+          <div style="font-size:17px;font-weight:700;line-height:1.25;margin:2px 0">${escapeHtml(p.desc || p.id)}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">${escapeHtml(p.itemNumber || p.id)}${p.listPrice ? ' · $'+formatMoney(p.listPrice) : ''}${p.family ? ' · '+escapeHtml(p.family) : ''}</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin:0 0 8px;font-size:15px">Used in ${uses.length} assemblies</h3>
+      <div class="results list">
+        ${uses.map(a => {
+          const s = a.parts.find(x => x.id === id);
+          return `<a href="#a/${encodeURIComponent(a.id)}">
+            <div class="id">${escapeHtml(a.itemNumber || a.id)} · qty ${s.qty}</div>
+            <div class="name">${escapeHtml(a.desc || a.id)}</div>
+          </a>`;
+        }).join('') || '<div class="empty">Not used in any assembly.</div>'}
+      </div>
+    </div>
+  `;
+  $('#summary').style.display = 'none';
+}
+
+// ============ EXPORTS ============
+function getMissingRows() {
+  const a = currentAssembly; if (!a) return [];
+  const state = checkState[a.id];
+  const rows = [];
+  a.parts.forEach(p => {
+    const have = state[p.id] || 0;
+    const need = p.qty - have;
+    if (need > 0) rows.push({...p, need});
+  });
+  return rows;
+}
+
+function exportMissing() {
+  const rows = getMissingRows();
+  if (!rows.length) { alert('Nothing missing for '+currentAssembly.pop); return; }
+  const lines = [
+    `${currentAssembly.itemNumber || currentAssembly.id} · ${currentAssembly.desc}`,
+    `Missing parts audit — ${new Date().toLocaleDateString()}`,
+    '',
+    ...rows.map(r => `${r.itemNumber || r.id}\t${r.pop||''}\t${r.desc}\tqty ${r.need}${r.listPrice? ' · $'+formatMoney(r.listPrice)+' ea': ''}`)
+  ];
+  const total = rows.reduce((s,r) => s + (r.listPrice ? r.listPrice*r.need : 0), 0);
+  if (total > 0) lines.push('', `Estimated list price total: $${formatMoney(total)}`);
+  openExport('Missing Parts', 'Copy or download the list of missing parts.', lines.join('\n'), 'missing');
+}
+
+function exportQuoteWerks() {
+  const rows = getMissingRows();
+  if (!rows.length) { alert('Nothing missing for '+currentAssembly.pop); return; }
+  const header = 'ItemNumber\tQty\tDescription\tListPrice';
+  const body = rows.map(r => [r.itemNumber || r.id, r.need, r.desc, r.listPrice||''].join('\t')).join('\n');
+  openExport('QuoteWerks Paste', 'Paste this into the QuoteWerks paste-import window. Tab-separated: PN | Qty | Desc | List.', header+'\n'+body, 'quotewerks');
+}
+
+let dlgKind = 'missing';
+function openExport(title, hint, content, kind) {
+  dlgKind = kind;
+  $('#dlg-title').textContent = title;
+  $('#dlg-hint').textContent = hint;
+  $('#dlg-content').value = content;
+  $('#export-dlg').showModal();
+}
+function dlgCopy() {
+  const t = $('#dlg-content');
+  t.select();
+  document.execCommand('copy');
+  navigator.clipboard && navigator.clipboard.writeText(t.value).catch(()=>{});
+  const btn = event.target;
+  const orig = btn.textContent; btn.textContent = '✓ Copied';
+  setTimeout(()=> btn.textContent = orig, 1200);
+}
+function dlgDownload() {
+  const a = currentAssembly;
+  const name = `${a.itemNumber || a.id}_${dlgKind}.csv`;
+  const blob = new Blob([$('#dlg-content').value], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url; link.download = name; link.click();
+  URL.revokeObjectURL(url);
+}
+
+// ============ helpers ============
+function imgUrl(path) {
+  if (!path) return '';
+  return IMG_BASE + String(path).split('/').map(encodeURIComponent).join('/');
+}
+function partThumbUrl(part) {
+  // Prefer field-uploaded photo over the SIM catalog photo
+  const fp = FIELD_PHOTOS[part.id];
+  if (fp) return API + fp.url;
+  if (part.img) return IMG_BASE + encodeImgPath(part.img);
+  return '';
+}
+function encodeImgPath(p) {
+  // Encode each path segment but keep '/' separators
+  return String(p).split('/').map(encodeURIComponent).join('/');
+}
+function assemblyHeroUrl(a) {
+  const fp = FIELD_PHOTOS[a.id];
+  if (fp) return API + fp.url;
+  if (a.img) return 'https://cdn1.gung.io/fit-in/900x900/caroliner/images/' + encodeImgPath(a.img);
+  return '';
+}
+function renderHero(a) {
+  const url = assemblyHeroUrl(a);
+  const isField = !!FIELD_PHOTOS[a.id];
+  if (url) {
+    return `<div class="hero" style="background-image:url('${url}')" onclick="openCamera('${escapeHtml(a.id)}')" title="Tap to replace photo">${isField?'<span class="field-badge">Field photo</span>':''}</div>`;
+  }
+  return `<div class="hero add-photo" onclick="openCamera('${escapeHtml(a.id)}')" title="Tap to add a photo"><span class="cam">📷</span><span>Tap to add assembly photo</span></div>`;
+}
+function formatMoney(v) {
+  if (v == null || v === '') return '';
+  return Number(v).toLocaleString('en-US',{maximumFractionDigits:0});
+}
+function escapeHtml(s) {
+  return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Fallback: if image fails, hide via CSS on error… (browsers handle background image errors silently, so no-op needed)
+</script>
+</body>
+</html>
