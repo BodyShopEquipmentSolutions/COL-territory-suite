@@ -1,0 +1,73 @@
+{
+  "sim_matches": [],
+  "qw_allproducts": [
+    "804711",
+    "863747",
+    "ATC555405047",
+    "CAR30531",
+    "CAR30774",
+    "CAR31040",
+    "CAR33907-KIT",
+    "CAR33989",
+    "CAR34347",
+    "CAR3579602",
+    "CAR35816",
+    "CAR41919",
+    "CAR46839",
+    "CAR47994",
+    "CAR49905",
+    "CAR50090-KIT",
+    "CAR50802-KIT",
+    "CAR51008-1-KIT",
+    "CAR51009-KIT",
+    "CAR725",
+    "CAR90735KIT",
+    "CAR930",
+    "CAR931",
+    "CAR934",
+    "CARNA-90586"
+  ],
+  "not_found": [
+    "CARNA-90587",
+    "CARNA34640KT",
+    "CARNA90001",
+    "CARNA90573",
+    "CARNA90574",
+    "CARNA90576",
+    "COLSW KIT-2",
+    "COMPUTER - VISION",
+    "COVER - VISION",
+    "EAK0361V64A-US",
+    "RAD64003040",
+    "SUPP.",
+    "TRAINING - NEW",
+    "TRAINING CMI",
+    "TRAINING STRW",
+    "WES411"
+  ],
+  "not_found_by_category": {
+    "CAR": [],
+    "CARNA": [
+      "CARNA-90587",
+      "CARNA34640KT",
+      "CARNA90001",
+      "CARNA90573",
+      "CARNA90574",
+      "CARNA90576"
+    ],
+    "COLSW": [
+      "COLSW KIT-2"
+    ],
+    "OTHER": [
+      "COMPUTER - VISION",
+      "COVER - VISION",
+      "EAK0361V64A-US",
+      "RAD64003040",
+      "SUPP.",
+      "TRAINING - NEW",
+      "TRAINING CMI",
+      "TRAINING STRW",
+      "WES411"
+    ]
+  }
+}
