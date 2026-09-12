@@ -485,9 +485,10 @@ async function emailRep({ rep, docId, base, apiKey }) {
         repUsername: rep,
         repEmail: to,
       }),
-      // send-from-rep may sit on the SendEmail RPC up to ~24s; give it
-      // 25s of slack. Netlify function total cap here is 26s.
-      signal: AbortSignal.timeout(25000),
+      // send-from-rep now runs under a 90s function timeout; give this outer
+      // fetch 88s so the caller sees the real error from the inner function
+      // instead of a premature AbortError.
+      signal: AbortSignal.timeout(88000),
     });
     const body = await resp.json().catch(() => ({}));
     if (resp.ok && body.ok) {

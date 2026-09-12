@@ -135,7 +135,7 @@ async function discoverReleasePath(jar) {
       cookie: jar.header(),
       accept: 'application/json',
     },
-    signal: AbortSignal.timeout(24000),
+    signal: AbortSignal.timeout(30000),
   }).catch((e) => ({ __err: e }));
   if (!probe || probe.__err) {
     throw new Error(`release-path probe failed: ${probe && probe.__err ? probe.__err.message : 'no response'}`);
@@ -299,12 +299,13 @@ async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride,
   }
 
   // SendEmail bundles PDF + hands off to Google SMTP inside QW's process,
-  // regularly needs 15-20s. Give it 24s (Netlify function cap is 26s).
+  // regularly needs 15-30s and can spike to 60s. Give it 80s of headroom now
+  // that the function-level timeout is bumped to 90s in netlify.toml.
   const sendResp = await step('SendEmail', () => qwPost(jar, releasePath, 'api/Email/SendEmail', {
     email,
     emailContext: 'EmailQuote',
     docRecGuid,
-  }), 24000);
+  }), 80000);
 
   return {
     ok: true,
