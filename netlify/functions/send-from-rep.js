@@ -123,25 +123,33 @@ async function loginQw({ tenant, username, password }) {
 }
 
 async function discoverReleasePath(jar) {
-  const resp = await fetch(`https://${QW_HOST}/ReleaseRouting/`, {
-    headers: {
-      cookie: jar.header(),
-      accept: 'text/html,application/xhtml+xml',
-    },
-    redirect: 'manual',
-  });
-  // ReleaseRouting returns a redirect / HTML pointing to /r26bXX/
-  const raw = await extractSetCookie(resp);
-  raw.forEach((c) => jar.ingest(c));
-  const loc = resp.headers.get('location');
-  if (loc && /\/r\w+\//.test(loc)) {
-    const m = loc.match(/(\/r\w+\/)/);
+  // ReleaseRouting stalls waiting for a browser to run JS; instead scan the
+  // login-redirect landing page (or the app root) for the current /rXXX/ path.
+  const candidates = ['/', '/ReleaseRouting/'];
+  for (const path of candidates) {
+    const resp = await fetch(`https://${QW_HOST}${path}`, {
+      headers: {
+        cookie: jar.header(),
+        accept: 'text/html,application/xhtml+xml',
+      },
+      redirect: 'manual',
+      signal: AbortSignal.timeout(10000),
+    }).catch((e) => ({ __err: e }));
+    if (resp.__err) continue;
+    const raw = await extractSetCookie(resp);
+    raw.forEach((c) => jar.ingest(c));
+    // 3xx redirect?
+    const loc = resp.headers.get('location') || '';
+    let m = loc.match(/(\/r[a-z0-9]+\/)/i);
     if (m) return m[1];
+    // Body scan (may 200 with meta-refresh or JS href)
+    try {
+      const body = await resp.text();
+      m = body.match(/(\/r[a-z0-9]+\/)/i);
+      if (m) return m[1];
+    } catch { /* ignore */ }
   }
-  const body = await resp.text();
-  const m = body.match(/(\/r[a-z0-9]+\/)/i);
-  if (m) return m[1];
-  throw new Error('could not discover /rXXXX/ release path from ReleaseRouting');
+  throw new Error('could not discover /rXXXX/ release path');
 }
 
 async function qwPost(jar, releasePath, apiPath, payload) {
