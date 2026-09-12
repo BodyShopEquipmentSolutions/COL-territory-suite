@@ -1032,10 +1032,11 @@ async function confirmCreateQuote(){
       })),
     }));
 
-  // Client timeout — Netlify functions cap at 26s; give it a bit more slack
-  // and surface a friendly error instead of hanging forever.
+  // Client timeout — Netlify functions now run under a 90s cap for the
+  // QW SendEmail path; give the client 100s so it doesn't abort ahead of
+  // the server, and still surface a friendly error if things go long.
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 45000);
+  const timeoutId = setTimeout(() => controller.abort(), 100000);
   try {
     const res = await fetch('/.netlify/functions/create-qw-quote', {
       method: 'POST',
@@ -1057,7 +1058,7 @@ async function confirmCreateQuote(){
   } catch(e){
     let msg = e.message;
     if (e.name === 'AbortError') {
-      msg = 'The quote is taking longer than 45 seconds. It may still finish in QuoteWerks — check QW for a new quote by ' + escapeHtml(prettyRep(state.rep)) + ' before re-submitting to avoid a duplicate.';
+      msg = 'The quote is taking longer than 100 seconds. It may still finish in QuoteWerks — check QW for a new quote by ' + escapeHtml(prettyRep(state.rep)) + ' before re-submitting to avoid a duplicate.';
     }
     err.textContent = msg;
     err.style.display = 'block';
