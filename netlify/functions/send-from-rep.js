@@ -167,7 +167,7 @@ async function qwPost(jar, releasePath, apiPath, payload) {
   return json;
 }
 
-async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride, dryRun, awaitSend }) {
+async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride }) {
   // Per-step timing so a stall in one QW call is diagnosable from the response.
   const timings = [];
   const step = async (name, fn, timeoutMs = 20000) => {
@@ -264,18 +264,12 @@ async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride,
     poSetDefaultLayout: false,
   }));
 
-  // DIAG: log the entire composer response shape so we can see whether QW is
-  // returning an accounts array we need to select from.
-  const composerTopKeys = composer ? Object.keys(composer).sort() : [];
-  const initData0 = composer?.emailInitData?.[0] || {};
-  const initData0Keys = Object.keys(initData0).sort();
-  const email = initData0.email;
+  const email = composer?.emailInitData?.[0]?.email;
   if (!email) {
-    const err = new Error(`GetEmailComposerInitData returned no email object. topKeys=${JSON.stringify(composerTopKeys)} initData0Keys=${JSON.stringify(initData0Keys)} raw=${JSON.stringify(composer)?.slice(0, 500)}`);
+    const err = new Error(`GetEmailComposerInitData returned no email object: ${JSON.stringify(composer)?.slice(0, 300)}`);
     err.timings = timings;
     throw err;
   }
-  const emailKeys = Object.keys(email).sort();
 
   const targetTo = Array.isArray(toOverride) && toOverride.length
     ? toOverride
@@ -284,71 +278,13 @@ async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride,
   email.cc = [];
   email.bcc = [];
 
-  // Fire-and-forget SendEmail. QW's SendEmail HTTP handler regularly needs
-  // 25-30s to return the response, but the outbound email is queued/sent to
-  // Google SMTP within the first few seconds. Waiting for the response blows
-  // past Netlify's 26s function cap and returns a false 'timeout' error even
-  // though the email actually goes out (confirmed by inbox check on AAAQ1036
-  // 2026-09-12).
-  //
-  // Instead: kick off the POST, wait a short grace period to catch immediate
-  // errors (bad payload, auth), then return 'dispatched' without awaiting the
-  // full response. QW continues processing after we return.
-  let sendStatus = 'skipped-dry-run';
-  let sendError = null;
-  let sendResponse = null;
-  if (!dryRun) {
-    const t0 = Date.now();
-    const sendPromise = qwPost(jar, releasePath, 'api/Email/SendEmail', {
-      email,
-      emailContext: 'EmailQuote',
-      docRecGuid,
-    }).catch((e) => ({ __err: e?.message || String(e) }));
-
-    if (awaitSend) {
-      // Diagnostic mode: wait up to 25s for the full SendEmail response so we
-      // can see what QW actually replies with. Only used when the caller
-      // explicitly requests it (?awaitSend=1 query, or awaitSend:true body).
-      const raced = await Promise.race([
-        sendPromise,
-        new Promise((r) => setTimeout(() => r({ __timedOut: true }), 25000)),
-      ]);
-      const ms = Date.now() - t0;
-      if (raced && raced.__timedOut) {
-        sendStatus = 'await-timeout-25s';
-        timings.push({ step: 'SendEmail', ms, ok: false, note: 'awaitSend timed out after 25s' });
-      } else if (raced && raced.__err) {
-        sendStatus = 'error';
-        sendError = raced.__err;
-        timings.push({ step: 'SendEmail', ms, ok: false, error: sendError });
-      } else {
-        sendStatus = 'completed';
-        sendResponse = raced;
-        timings.push({ step: 'SendEmail', ms, ok: true, note: 'awaited full response' });
-      }
-    } else {
-      // Race against a 2s window: if QW rejects the request early (400/500 with
-      // a payload error), we surface that. Otherwise we assume it's processing
-      // and return dispatched. We do NOT await the full response.
-      const early = await Promise.race([
-        sendPromise,
-        new Promise((r) => setTimeout(() => r({ __dispatched: true }), 2000)),
-      ]);
-      const ms = Date.now() - t0;
-      if (early && early.__dispatched) {
-        sendStatus = 'dispatched';
-        timings.push({ step: 'SendEmail', ms, ok: true, note: 'fire-and-forget (dispatched)' });
-      } else if (early && early.__err) {
-        sendStatus = 'error';
-        sendError = early.__err;
-        timings.push({ step: 'SendEmail', ms, ok: false, error: sendError });
-      } else {
-        sendStatus = 'completed-fast';
-        sendResponse = early;
-        timings.push({ step: 'SendEmail', ms, ok: true, note: 'returned within 2s window' });
-      }
-    }
-  }
+  // SendEmail bundles PDF + hands off to Google SMTP inside QW's process,
+  // regularly needs 15-20s. Give it 24s (Netlify function cap is 26s).
+  const sendResp = await step('SendEmail', () => qwPost(jar, releasePath, 'api/Email/SendEmail', {
+    email,
+    emailContext: 'EmailQuote',
+    docRecGuid,
+  }), 24000);
 
   return {
     ok: true,
@@ -358,9 +294,6 @@ async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride,
     subject: email.subject,
     attachments: (email.attachments || []).map((a) => a.name),
     layoutSelected: { name: primaryLayout.layoutName, file: primaryLayout.file, source: primarySource },
-    sendStatus,
-    sendError,
-    composerShape: { composerTopKeys, initData0Keys, emailKeys, email: dryRun ? email : undefined },
     pdfDiag: {
       pdfListCount: Array.isArray(pdfResp?.pdfList) ? pdfResp.pdfList.length : null,
       firstPdfId: pdfResp?.pdfList?.[0]?.printPdfId || null,
@@ -373,7 +306,7 @@ async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride,
       bodyPreview: (email.body || '').slice(0, 120),
       subject: email.subject,
     },
-    sendResponse: sendResponse ? (typeof sendResponse === 'object' ? sendResponse : { raw: String(sendResponse).slice(0, 500) }) : null,
+    sendResponse: sendResp,
     timings,
   };
 }
