@@ -135,7 +135,7 @@ async function discoverReleasePath(jar) {
       cookie: jar.header(),
       accept: 'application/json',
     },
-    signal: AbortSignal.timeout(10000),
+    signal: AbortSignal.timeout(24000),
   }).catch((e) => ({ __err: e }));
   if (!probe || probe.__err) {
     throw new Error(`release-path probe failed: ${probe && probe.__err ? probe.__err.message : 'no response'}`);
@@ -170,12 +170,12 @@ async function qwPost(jar, releasePath, apiPath, payload) {
 async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride }) {
   // Per-step timing so a stall in one QW call is diagnosable from the response.
   const timings = [];
-  const step = async (name, fn) => {
+  const step = async (name, fn, timeoutMs = 20000) => {
     const t0 = Date.now();
     try {
       const result = await Promise.race([
         fn(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error(`${name} timeout after 20s`)), 20000)),
+        new Promise((_, reject) => setTimeout(() => reject(new Error(`${name} timeout after ${timeoutMs/1000}s`)), timeoutMs)),
       ]);
       timings.push({ step: name, ms: Date.now() - t0, ok: true });
       return result;
@@ -278,11 +278,13 @@ async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride 
   email.cc = [];
   email.bcc = [];
 
+  // SendEmail bundles PDF + hands off to Google SMTP inside QW's process,
+  // regularly needs 15-20s. Give it 24s (Netlify function cap is 26s).
   const sendResp = await step('SendEmail', () => qwPost(jar, releasePath, 'api/Email/SendEmail', {
     email,
     emailContext: 'EmailQuote',
     docRecGuid,
-  }));
+  }), 24000);
 
   return {
     ok: true,
