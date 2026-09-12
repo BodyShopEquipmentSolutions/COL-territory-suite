@@ -168,6 +168,24 @@ async function qwPost(jar, releasePath, apiPath, payload) {
 }
 
 async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride }) {
+  const timings = [];
+  const step = async (name, fn) => {
+    const t0 = Date.now();
+    try {
+      const result = await Promise.race([
+        fn(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error(`${name} timeout after 20s`)), 20000)),
+      ]);
+      timings.push({ step: name, ms: Date.now() - t0, ok: true });
+      return result;
+    } catch (e) {
+      timings.push({ step: name, ms: Date.now() - t0, ok: false, error: e?.message || String(e) });
+      const err = new Error(`step '${name}' failed: ${e?.message || e}`);
+      err.timings = timings;
+      throw err;
+    }
+  };
+
   if (!docRecGuid) throw new Error('docRecGuid required');
   if (!repUsername) throw new Error('repUsername required');
 
@@ -178,18 +196,15 @@ async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride 
     throw new Error(`QW credentials not configured for rep '${repUsername}' (expected QW_USERNAME_${envKey} / QW_PASSWORD_${envKey})`);
   }
 
-  const jar = await loginQw({ tenant: QW_TENANT, username: qwUsername, password: qwPassword });
-  const releasePath = await discoverReleasePath(jar);
+  const jar = await step('login', () => loginQw({ tenant: QW_TENANT, username: qwUsername, password: qwPassword }));
+  const releasePath = await step('discoverReleasePath', () => discoverReleasePath(jar));
 
-  // Warm the deliver flow (matches what the UI does on Deliver -> Email).
-  await qwPost(jar, releasePath, 'api/DocumentDeliver/GetDocumentDeliverInitData', {
+  await step('GetDocumentDeliverInitData', () => qwPost(jar, releasePath, 'api/DocumentDeliver/GetDocumentDeliverInitData', {
     docRecGuid,
     isAdministrationMode: false,
-  });
+  }));
 
-  // Grab the initial email composer state. FROM already = SalesRep because
-  // the rep is logged in. TO is populated from the document.
-  const composer = await qwPost(jar, releasePath, 'api/Email/GetEmailComposerInitData', {
+  const composer = await step('GetEmailComposerInitData', () => qwPost(jar, releasePath, 'api/Email/GetEmailComposerInitData', {
     emailContext: 'EmailQuote',
     docRecGuid,
     coverPageMessage: '',
@@ -200,14 +215,15 @@ async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride 
     poRecGuid: '',
     layoutOverride: '',
     poSetDefaultLayout: false,
-  });
+  }));
 
   const email = composer?.emailInitData?.[0]?.email;
   if (!email) {
-    throw new Error(`GetEmailComposerInitData returned no email object: ${JSON.stringify(composer)?.slice(0, 300)}`);
+    const err = new Error(`GetEmailComposerInitData returned no email object: ${JSON.stringify(composer)?.slice(0, 300)}`);
+    err.timings = timings;
+    throw err;
   }
 
-  // Rewrite the TO field: rep-to-rep unless the caller passes toOverride.
   const targetTo = Array.isArray(toOverride) && toOverride.length
     ? toOverride
     : [repEmail || qwUsername];
@@ -215,12 +231,11 @@ async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride 
   email.cc = [];
   email.bcc = [];
 
-  // Fire SendEmail. This is the same endpoint the Send button uses.
-  const sendResp = await qwPost(jar, releasePath, 'api/Email/SendEmail', {
+  const sendResp = await step('SendEmail', () => qwPost(jar, releasePath, 'api/Email/SendEmail', {
     email,
     emailContext: 'EmailQuote',
     docRecGuid,
-  });
+  }));
 
   return {
     ok: true,
@@ -230,6 +245,7 @@ async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride 
     subject: email.subject,
     attachments: (email.attachments || []).map((a) => a.name),
     sendResponse: sendResp,
+    timings,
   };
 }
 
@@ -266,6 +282,7 @@ export const handler = async (event) => {
   } catch (e) {
     return respond(500, {
       error: e?.message || String(e),
+      timings: e?.timings,
     });
   }
 };
