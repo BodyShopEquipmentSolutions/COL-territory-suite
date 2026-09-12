@@ -220,6 +220,89 @@ async function lookupProduct(base, apiKey, partNumber, cache, diagErrors) {
 }
 
 // ---------------------------------------------------------------------------
+// Bulk-warm the product cache for a list of SKUs using a single 'in' filter
+// query per variant set instead of one HTTP round-trip per SKU. This turns
+// 74-line audits from 148+ QW calls (74 lookups + 74 inserts) into ~77
+// (2-3 bulk lookups + 74 inserts), keeping us under the 200 req/60s rate
+// limit and inside Netlify's 26s function ceiling. Individual `lookupProduct`
+// calls that come in later still work — they hit the pre-warmed cache.
+// ---------------------------------------------------------------------------
+async function bulkLookupProducts(base, apiKey, skus, cache, diagErrors) {
+  const clean = Array.from(new Set(skus.map(s => String(s || '').trim()).filter(Boolean)));
+  if (!clean.length) return;
+
+  // Build variant → originals map so we can back-fill originals from any variant hit.
+  const variantsFor = (key) => {
+    const out = new Set([key]);
+    const m = key.match(/^([A-Za-z]+)(\d.*)$/);
+    if (m) out.add(`${m[1]}-${m[2]}`);
+    if (key.includes('-')) out.add(key.replace(/-/g, ''));
+    return Array.from(out);
+  };
+  const variantIndex = new Map(); // variant string -> [original keys]
+  for (const key of clean) {
+    if (cache.has(key)) continue; // already resolved earlier this request
+    for (const v of variantsFor(key)) {
+      if (!variantIndex.has(v)) variantIndex.set(v, []);
+      variantIndex.get(v).push(key);
+    }
+  }
+  if (variantIndex.size === 0) return;
+
+  const allVariants = Array.from(variantIndex.keys());
+
+  // Chunk 'in' filter to a safe size — keep URL/body payload sane.
+  const CHUNK = 80;
+  for (let start = 0; start < allVariants.length; start += CHUNK) {
+    const chunk = allVariants.slice(start, start + CHUNK);
+    for (const field of ['ManufacturerPartNumber', 'VendorPartNumber']) {
+      // Skip lookup on this field if every original is already resolved.
+      const needed = chunk.filter(v =>
+        variantIndex.get(v).some(orig => !cache.has(orig) || cache.get(orig) == null)
+      );
+      if (!needed.length) continue;
+      const body = {
+        filter: [{ name: field, op: 'in', val: needed }],
+        page: { size: needed.length + 10 },
+        fields: { Products_AllProducts_Products: [
+          'ManufacturerPartNumber','VendorPartNumber','Manufacturer','Description','Price','Cost','List',
+        ] },
+      };
+      try {
+        const res = await qwFetch(base, apiKey, '/api/v1/qw/tables/Products_AllProducts_Products/search', { method: 'POST', body });
+        const rows = Array.isArray(res && res.data) ? res.data : [];
+        for (const row of rows) {
+          const hit = row.attributes || {};
+          const matched = String(hit[field] || '').trim();
+          if (!matched) continue;
+          const originals = variantIndex.get(matched) || [];
+          const productObj = {
+            manufacturer: hit.Manufacturer || '',
+            description: hit.Description || '',
+            price: Number(hit.Price) || 0,
+            cost:  Number(hit.Cost)  || 0,
+            list:  Number(hit.List)  || 0,
+          };
+          for (const orig of originals) {
+            // First hit wins; don't overwrite a real hit with a later one.
+            if (!cache.has(orig) || cache.get(orig) == null) cache.set(orig, productObj);
+          }
+        }
+      } catch (e) {
+        // Non-fatal — individual lookupProduct calls will retry each SKU.
+        // Just log the bulk-lookup error once and continue.
+        if (diagErrors) diagErrors.push({ bulk: field, error: (e.message || String(e)).slice(0, 200) });
+      }
+    }
+  }
+
+  // Mark unresolved originals as explicit misses so the per-SKU lookupProduct
+  // fallback still runs (dash variants etc.) without re-hitting cache=null.
+  // Actually — we want per-SKU fallback to trigger, so DO NOT insert nulls;
+  // leave misses uncached and lookupProduct will handle them individually.
+}
+
+// ---------------------------------------------------------------------------
 // Fetch the full CRMCompanies record + PrimaryContact for a customer.id and
 // merge it into the customer object the frontend sent, keeping frontend values
 // as the authoritative source when both exist.
@@ -374,6 +457,23 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
 
   // Product lookup cache shared across the whole quote.
   const productCache = new Map();
+
+  // Bulk-warm the cache with a single `in` query per part-number field.
+  // Turns 74 individual lookups into 2 batched calls, protecting us from
+  // both the Netlify 26s ceiling and the QW 200 req/60s rate limit.
+  const allSkusForBulk = [];
+  for (const panel of (Array.isArray(panels) ? panels : [])) {
+    const push = (arr) => (Array.isArray(arr) ? arr : []).forEach(it => {
+      const sku = it && (it.parentPartNumber || it.partNumber);
+      if (sku) allSkusForBulk.push(sku);
+      // Also warm the custom-line synthetic CAR<id> keys.
+      if (it && it.partNumber) allSkusForBulk.push(it.partNumber);
+    });
+    push(panel.missing); push(panel.damaged); push(panel.custom);
+  }
+  diag.bulkLookupErrors = [];
+  await bulkLookupProducts(base, apiKey, allSkusForBulk, productCache, diag.bulkLookupErrors);
+  diag.bulkPrewarmed = productCache.size;
 
   // Build the FULL line plan up front, then dispatch in parallel.
   const plan = [];
