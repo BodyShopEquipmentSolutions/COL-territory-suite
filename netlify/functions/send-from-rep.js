@@ -205,12 +205,28 @@ async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride 
     isAdministrationMode: false,
   }));
 
-  // Find the layout marked isSelectedPrimary. That's what the UI pre-selects
-  // and what our server-side session needs to know about to render the PDF.
+  // Find the primary layout. First try the isSelectedPrimary flag (set when a
+  // user has clicked it as primary in the UI at some point). If none is
+  // flagged in this session (fresh API login sometimes returns all false),
+  // fall back to matching by layout name — COL Quote Layout 2 - WIP is what
+  // the team is currently sending. Extend the fallback list as more layouts
+  // get approved. Env var QW_PRIMARY_LAYOUT_NAME overrides the default.
   const layouts = deliverInit?.newLayouts || [];
-  const primaryLayout = layouts.find((l) => l.isSelectedPrimary) || null;
+  const FALLBACK_LAYOUT_NAMES = [
+    process.env.QW_PRIMARY_LAYOUT_NAME,
+    'COL Quote Layout 2 - WIP',
+    'COL Quote Layout 1',
+  ].filter(Boolean);
+  let primaryLayout = layouts.find((l) => l.isSelectedPrimary) || null;
+  let primarySource = 'isSelectedPrimary';
   if (!primaryLayout) {
-    throw new Error(`No primary layout marked isSelectedPrimary on tenant. Available: ${layouts.map((l) => l.layoutName).join(', ')}`);
+    for (const name of FALLBACK_LAYOUT_NAMES) {
+      const found = layouts.find((l) => l.layoutName === name);
+      if (found) { primaryLayout = found; primarySource = `fallback-name:${name}`; break; }
+    }
+  }
+  if (!primaryLayout) {
+    throw new Error(`No primary layout found. Available: ${layouts.map((l) => l.layoutName).join(', ')}`);
   }
 
   // Tell the server-side session which layout is primary. Without this call,
@@ -275,7 +291,7 @@ async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride 
     from: email.from,
     subject: email.subject,
     attachments: (email.attachments || []).map((a) => a.name),
-    layoutSelected: { name: primaryLayout.layoutName, file: primaryLayout.file },
+    layoutSelected: { name: primaryLayout.layoutName, file: primaryLayout.file, source: primarySource },
     pdfDiag: {
       pdfListCount: Array.isArray(pdfResp?.pdfList) ? pdfResp.pdfList.length : null,
       firstPdfId: pdfResp?.pdfList?.[0]?.printPdfId || null,

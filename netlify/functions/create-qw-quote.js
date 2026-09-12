@@ -120,7 +120,7 @@ function clip(field, val) {
 // variant (CARNA90586 <-> CARNA-90586) because QW's data has both patterns.
 // Cache within a single request so repeated parts don't re-hit the API.
 // ---------------------------------------------------------------------------
-async function lookupProduct(base, apiKey, partNumber, cache) {
+async function lookupProduct(base, apiKey, partNumber, cache, diagErrors) {
   const key = String(partNumber || '').trim();
   if (!key) return null;
   if (cache && cache.has(key)) return cache.get(key);
@@ -130,6 +130,7 @@ async function lookupProduct(base, apiKey, partNumber, cache) {
   if (m) variants.push(`${m[1]}-${m[2]}`);
   if (key.includes('-')) variants.push(key.replace(/-/g, ''));
   let hit = null;
+  let lastErr = null;
   for (const val of variants) {
     if (hit) break;
     for (const field of ['ManufacturerPartNumber', 'VendorPartNumber']) {
@@ -140,12 +141,29 @@ async function lookupProduct(base, apiKey, partNumber, cache) {
           'ManufacturerPartNumber','Manufacturer','Description','Price','Cost','List',
         ] },
       };
-      try {
-        const res = await qwFetch(base, apiKey, '/api/v1/qw/tables/Products_AllProducts_Products/search', { method: 'POST', body });
-        const rows = Array.isArray(res && res.data) ? res.data : [];
-        if (rows.length) { hit = rows[0].attributes || {}; break; }
-      } catch { /* keep trying */ }
+      // Retry the search once on transient failure. The QW REST API
+      // occasionally 500s or times out; a silent skip leaves $0 prices on the
+      // quote and the user thinks the whole system is broken.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const res = await qwFetch(base, apiKey, '/api/v1/qw/tables/Products_AllProducts_Products/search', { method: 'POST', body });
+          const rows = Array.isArray(res && res.data) ? res.data : [];
+          if (rows.length) { hit = rows[0].attributes || {}; }
+          lastErr = null;
+          break;
+        } catch (e) {
+          lastErr = e;
+          if (attempt === 0) await new Promise(r => setTimeout(r, 250));
+        }
+      }
+      if (hit) break;
     }
+  }
+  if (!hit && diagErrors) {
+    diagErrors.push({
+      sku: key,
+      error: lastErr ? (lastErr.message || String(lastErr)).slice(0, 120) : 'no_match',
+    });
   }
   const out = hit ? {
     manufacturer: hit.Manufacturer || '',
@@ -163,26 +181,45 @@ async function lookupProduct(base, apiKey, partNumber, cache) {
 // merge it into the customer object the frontend sent, keeping frontend values
 // as the authoritative source when both exist.
 // ---------------------------------------------------------------------------
-async function enrichCustomer(base, apiKey, customer) {
+async function enrichCustomer(base, apiKey, customer, diag) {
   if (!customer || !customer.id) return customer || null;
   let company = null;
-  try {
-    const res = await qwFetch(base, apiKey,
-      `/api/v1/qw/tables/CRMCompanies/${encodeURIComponent(customer.id)}`);
-    company = res && res.data && res.data.attributes ? res.data.attributes : null;
-  } catch { /* leave null; we'll fall back to what the frontend sent */ }
-  if (!company) return customer;
+  let lastErr = null;
+  // Retry once on transient QW REST failure. Silent-swallow leaves the quote
+  // with empty SoldToAddress1/SoldToContact/PostalCode/Country and no signal
+  // to the user — the whole point of enrichment.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await qwFetch(base, apiKey,
+        `/api/v1/qw/tables/CRMCompanies/${encodeURIComponent(customer.id)}`);
+      company = res && res.data && res.data.attributes ? res.data.attributes : null;
+      lastErr = null;
+      break;
+    } catch (e) {
+      lastErr = e;
+      if (attempt === 0) await new Promise(r => setTimeout(r, 250));
+    }
+  }
+  if (!company) {
+    if (diag && lastErr) diag.enrichError = (lastErr.message || String(lastErr)).slice(0, 200);
+    return customer;
+  }
   // Try to also pull the primary contact's name for SoldToContact.
   let contactName = '';
   const contactRecGuid = company.PrimaryContactRecGUID;
   if (contactRecGuid) {
-    try {
-      const res = await qwFetch(base, apiKey,
-        `/api/v1/qw/tables/CRMContacts/${encodeURIComponent(contactRecGuid)}`);
-      const a = res && res.data && res.data.attributes ? res.data.attributes : {};
-      contactName = a.ContactName ||
-        [a.FirstName, a.LastName].filter(Boolean).join(' ') || '';
-    } catch { /* optional */ }
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await qwFetch(base, apiKey,
+          `/api/v1/qw/tables/CRMContacts/${encodeURIComponent(contactRecGuid)}`);
+        const a = res && res.data && res.data.attributes ? res.data.attributes : {};
+        contactName = a.ContactName ||
+          [a.FirstName, a.LastName].filter(Boolean).join(' ') || '';
+        break;
+      } catch {
+        if (attempt === 0) await new Promise(r => setTimeout(r, 250));
+      }
+    }
   }
   // Merge — frontend value wins if present and non-empty; otherwise use QW record.
   const pick = (frontVal, qwVal) => (frontVal && String(frontVal).trim()) ? frontVal : (qwVal || '');
@@ -270,6 +307,7 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
     contactHit: false,
     productLookups: 0,
     productHits: 0,
+    productMisses: [], // {sku, error?} for each unhit lookup
   };
 
   // Enrich the customer object with the full CRMCompanies + primary contact record
@@ -278,7 +316,7 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
   if (customer && customer.id) {
     diag.enrichAttempted = true;
     try {
-      const enriched = await enrichCustomer(base, apiKey, customer);
+      const enriched = await enrichCustomer(base, apiKey, customer, diag);
       if (enriched && enriched !== customer) {
         diag.enrichHit = true;
         diag.contactHit = !!(enriched.contact && enriched.contact !== customer.contact);
@@ -340,7 +378,7 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
     for (const rollup of rollups.values()) {
       const billableQty = rollup.isExpanded ? 1 : (Number(rollup.leaves[0].qty) || 1);
       diag.productLookups += 1;
-      const prod = await lookupProduct(base, apiKey, rollup.partNumber, productCache);
+      const prod = await lookupProduct(base, apiKey, rollup.partNumber, productCache, diag.productMisses);
       if (prod) diag.productHits += 1;
       plan.push({
         LineType: 1,
@@ -357,7 +395,7 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
     for (const it of custom) {
       const pn = it.partNumber || (it.id ? `CAR${it.id}` : '');
       diag.productLookups += 1;
-      const prod = await lookupProduct(base, apiKey, pn, productCache);
+      const prod = await lookupProduct(base, apiKey, pn, productCache, diag.productMisses);
       if (prod) diag.productHits += 1;
       plan.push({
         LineType: 1,
