@@ -138,14 +138,17 @@ async function discoverReleasePath(jar) {
     if (resp.__err) continue;
     const raw = await extractSetCookie(resp);
     raw.forEach((c) => jar.ingest(c));
+    // Release paths look like /r26b3a/, /r26b3b/, etc.: /r + digits + lowercase letters.
+    // Must NOT match /ReleaseRouting/, /Resources/, etc.
+    const releaseRe = /(\/r\d\w+?\/)/;
     // 3xx redirect?
     const loc = resp.headers.get('location') || '';
-    let m = loc.match(/(\/r[a-z0-9]+\/)/i);
+    let m = loc.match(releaseRe);
     if (m) return m[1];
     // Body scan (may 200 with meta-refresh or JS href)
     try {
       const body = await resp.text();
-      m = body.match(/(\/r[a-z0-9]+\/)/i);
+      m = body.match(releaseRe);
       if (m) return m[1];
     } catch { /* ignore */ }
   }
