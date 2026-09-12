@@ -200,9 +200,39 @@ async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride 
   const jar = await step('login', () => loginQw({ tenant: QW_TENANT, username: qwUsername, password: qwPassword }));
   const releasePath = await step('discoverReleasePath', () => discoverReleasePath(jar));
 
-  await step('GetDocumentDeliverInitData', () => qwPost(jar, releasePath, 'api/DocumentDeliver/GetDocumentDeliverInitData', {
+  const deliverInit = await step('GetDocumentDeliverInitData', () => qwPost(jar, releasePath, 'api/DocumentDeliver/GetDocumentDeliverInitData', {
     docRecGuid,
     isAdministrationMode: false,
+  }));
+
+  // Find the layout marked isSelectedPrimary. That's what the UI pre-selects
+  // and what our server-side session needs to know about to render the PDF.
+  const layouts = deliverInit?.newLayouts || [];
+  const primaryLayout = layouts.find((l) => l.isSelectedPrimary) || null;
+  if (!primaryLayout) {
+    throw new Error(`No primary layout marked isSelectedPrimary on tenant. Available: ${layouts.map((l) => l.layoutName).join(', ')}`);
+  }
+
+  // Tell the server-side session which layout is primary. Without this call,
+  // GeneratePrintPdf produces no PDF and GetEmailComposerInitData returns
+  // an empty attachments array (this is exactly what QW's UI does when the
+  // user clicks Email in the Deliver dialog).
+  await step('SetLayoutSelection', () => qwPost(jar, releasePath, 'api/DocumentDeliver/SetLayoutSelection', {
+    layoutIdentifier: primaryLayout.file,
+    layoutIsSelected: true,
+    isPrimaryLayout: true,
+    layoutType: primaryLayout.layoutType,
+    layoutDisplayText: primaryLayout.layoutName,
+    fileType: primaryLayout.fileType,
+  }));
+
+  // Now render the PDF. qwPrintMethod=5 is Email. force=true bypasses any
+  // stale-print-pdf-id cache from an earlier call on this session.
+  const pdfResp = await step('GeneratePrintPdf', () => qwPost(jar, releasePath, 'api/DocumentDeliver/GeneratePrintPdf', {
+    coverPageMessage: '',
+    qwPrintMethod: 5,
+    createPOforEachVendor: null,
+    makePDFReadOnly: null,
   }));
 
   const composer = await step('GetEmailComposerInitData', () => qwPost(jar, releasePath, 'api/Email/GetEmailComposerInitData', {
@@ -245,17 +275,18 @@ async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride 
     from: email.from,
     subject: email.subject,
     attachments: (email.attachments || []).map((a) => a.name),
-    // Diagnostic snapshot: fields the composer actually returned so we can
-    // tell whether it built the PDF and populated body/attachments.
+    layoutSelected: { name: primaryLayout.layoutName, file: primaryLayout.file },
+    pdfDiag: {
+      pdfListCount: Array.isArray(pdfResp?.pdfList) ? pdfResp.pdfList.length : null,
+      firstPdfId: pdfResp?.pdfList?.[0]?.printPdfId || null,
+      firstPdfName: pdfResp?.pdfList?.[0]?.printPdfFileName || null,
+    },
     composerDiag: {
       hasAttachments: Array.isArray(email.attachments) ? email.attachments.length : null,
       attachmentKeys: Array.isArray(email.attachments) && email.attachments[0] ? Object.keys(email.attachments[0]).sort() : null,
       bodyLen: (email.body || '').length,
       bodyPreview: (email.body || '').slice(0, 120),
-      isHtml: email.isHtml,
       subject: email.subject,
-      from: email.from,
-      emailKeys: Object.keys(email).sort(),
     },
     sendResponse: sendResp,
     timings,
