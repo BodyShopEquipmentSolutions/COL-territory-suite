@@ -1032,10 +1032,12 @@ async function confirmCreateQuote(){
       })),
     }));
 
-  // Client timeout — Netlify functions cap at 26s; give it a bit more slack
-  // and surface a friendly error instead of hanging forever.
+  // Client timeout — the backend now returns quickly for large quotes
+  // (creates the header, fires a background function for line inserts, and
+  // returns DocNo immediately). 30s is plenty; anything longer than that
+  // is a genuine failure worth surfacing.
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 45000);
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
   try {
     const res = await fetch('/.netlify/functions/create-qw-quote', {
       method: 'POST',
@@ -1054,10 +1056,15 @@ async function confirmCreateQuote(){
     state.step = 'success';
     closeReview();
     render();
+    // If the backend deferred lines + PDF to a background function, start
+    // polling quote_status so the success screen updates when everything's done.
+    if (j.backgrounded && j.docId) {
+      startBackgroundPolling(j.docId);
+    }
   } catch(e){
     let msg = e.message;
     if (e.name === 'AbortError') {
-      msg = 'The quote is taking longer than 45 seconds. It may still finish in QuoteWerks — check QW for a new quote by ' + escapeHtml(prettyRep(state.rep)) + ' before re-submitting to avoid a duplicate.';
+      msg = 'The quote is taking longer than 30 seconds. It may still finish in QuoteWerks — check QW for a new quote by ' + escapeHtml(prettyRep(state.rep)) + ' before re-submitting to avoid a duplicate.';
     }
     err.textContent = msg;
     err.style.display = 'block';
@@ -1070,21 +1077,89 @@ async function confirmCreateQuote(){
 }
 
 // ============================================================================
+// Background quote polling — kicked off when the backend returns
+// { backgrounded: true }. Polls the quote_status action every 4s and re-renders
+// the success screen when lines appear + email is sent.
+// ============================================================================
+let bgPollTimer = null;
+let bgPollAttempts = 0;
+function startBackgroundPolling(docId){
+  clearInterval(bgPollTimer);
+  bgPollAttempts = 0;
+  bgPollTimer = setInterval(async () => {
+    bgPollAttempts += 1;
+    // Stop polling after ~5 minutes (75 attempts × 4s) — even huge quotes
+    // finish inside that window.
+    if (bgPollAttempts > 75) {
+      clearInterval(bgPollTimer);
+      bgPollTimer = null;
+      return;
+    }
+    try {
+      const r = await fetch('/.netlify/functions/create-qw-quote', {
+        method: 'POST',
+        headers: {'content-type':'application/json'},
+        body: JSON.stringify({ action: 'quote_status', docId }),
+      });
+      const j = await r.json();
+      if (!j.ok) return;
+      if (!state.result) return;
+      state.result.bgStatus = {
+        itemCount: j.itemCount || 0,
+        grandTotal: j.grandTotal || 0,
+      };
+      // Consider the quote "done" once the header has a non-zero GrandTotal
+      // (means all lines are inserted and QW has priced them up). Emails fire
+      // right after the last insert, so this is a reliable done-signal.
+      const done = (j.grandTotal || 0) > 0 && (j.itemCount || 0) >= (state.result.itemCount || 1);
+      if (done) {
+        state.result.backgrounded = false;
+        state.result.mail = { sent: true, via: 'qw', backgroundedDone: true };
+        clearInterval(bgPollTimer);
+        bgPollTimer = null;
+      }
+      if (state.step === 'success') render();
+    } catch { /* ignore transient poll errors */ }
+  }, 4000);
+}
+
+// ============================================================================
 // Success screen
 // ============================================================================
 function viewSuccess(){
   const r = state.result || {};
   const mail = r.mail || {};
-  const mailNote = mail.sent
-    ? `<div class="hint">Email sent to <strong>${escapeHtml(mail.to || '')}</strong>${mail.mapped ? '' : ' <span style="color:var(--warn)">(fallback inbox — rep email not yet mapped)</span>'}.</div>`
-    : `<div class="hint" style="color:var(--warn)">Email not sent${mail.reason ? ' — ' + escapeHtml(mail.reason) : ''}${mail.error ? ' — ' + escapeHtml(mail.error) : ''}. The quote is still in QuoteWerks.</div>`;
   const qwUrl = r.quoteUrl || (r.docId ? ('https://na.quotewerks.com/#/documents/' + r.docId) : '');
+
+  let statusBlock;
+  if (r.backgrounded) {
+    // Background job in flight — lines + PDF are being added by the server.
+    const bg = r.bgStatus || {};
+    const totalItems = r.itemCount || 0;
+    const done = bg.itemCount || 0;
+    // Rough time expectation: ~0.5s per line + 5s email = a minute for 100 lines.
+    const etaSec = Math.max(15, Math.ceil(totalItems * 0.6) + 5);
+    const progressLine = totalItems
+      ? `<div class="hint">${done}/${totalItems} lines added${done < totalItems ? ' — still working…' : ''}</div>`
+      : '<div class="hint">Building lines and preparing the PDF…</div>';
+    statusBlock = `
+      <div class="hint" style="margin:6px 0 4px">The quote header is in QuoteWerks. Line inserts and the PDF email are running in the background — expect the email in about ${etaSec} seconds.</div>
+      ${progressLine}
+    `;
+  } else if (mail.backgroundedDone) {
+    statusBlock = `<div class="hint">All lines added. PDF email sent from QuoteWerks.</div>`;
+  } else if (mail.sent) {
+    statusBlock = `<div class="hint">Email sent to <strong>${escapeHtml(mail.to || '')}</strong>${mail.mapped ? '' : ' <span style="color:var(--warn)">(fallback inbox — rep email not yet mapped)</span>'}.</div>`;
+  } else {
+    statusBlock = `<div class="hint" style="color:var(--warn)">Email not sent${mail.reason ? ' — ' + escapeHtml(mail.reason) : ''}${mail.error ? ' — ' + escapeHtml(mail.error) : ''}. The quote is still in QuoteWerks.</div>`;
+  }
+
   return `
     <div class="card" style="text-align:center;padding:32px 20px">
       <div style="font-size:44px;line-height:1">✅</div>
       <h2 style="margin:12px 0 4px;font-size:22px">Quote ${escapeHtml(r.docNo || '(pending #)')} created</h2>
       <p class="hint" style="margin-top:0">Nice work — the audit is in QuoteWerks.</p>
-      ${mailNote}
+      ${statusBlock}
       <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px">
         ${qwUrl ? `<a class="btn" href="${escapeHtml(qwUrl)}" target="_blank" rel="noopener">Open in QuoteWerks Web →</a>` : ''}
         <button class="btn sec" onclick="startAnother()">Start Another Audit</button>
