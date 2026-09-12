@@ -167,7 +167,7 @@ async function qwPost(jar, releasePath, apiPath, payload) {
   return json;
 }
 
-async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride }) {
+async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride, fromOverride, fromDisplayName }) {
   // Per-step timing so a stall in one QW call is diagnosable from the response.
   const timings = [];
   const step = async (name, fn, timeoutMs = 20000) => {
@@ -190,11 +190,20 @@ async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride 
   if (!docRecGuid) throw new Error('docRecGuid required');
   if (!repUsername) throw new Error('repUsername required');
 
+  // QW Web is single-tenant — any authenticated rep can pick another user's
+  // address in the composer's From dropdown, so we don't need every rep's
+  // credentials to send "as" them. Prefer the requested rep's creds if present;
+  // otherwise fall back to a shared account (QW_USERNAME/QW_PASSWORD) and set
+  // email.from to the requested rep's address later.
   const envKey = repUsername.replace(/[.\-]/g, '_');
-  const qwUsername = process.env[`QW_USERNAME_${envKey}`];
-  const qwPassword = process.env[`QW_PASSWORD_${envKey}`];
+  const qwUsername = process.env[`QW_USERNAME_${envKey}`]
+    || process.env.QW_USERNAME_ryan_harthcock
+    || process.env.QW_USERNAME;
+  const qwPassword = process.env[`QW_PASSWORD_${envKey}`]
+    || process.env.QW_PASSWORD_ryan_harthcock
+    || process.env.QW_PASSWORD;
   if (!qwUsername || !qwPassword) {
-    throw new Error(`QW credentials not configured for rep '${repUsername}' (expected QW_USERNAME_${envKey} / QW_PASSWORD_${envKey})`);
+    throw new Error(`No QW credentials available (checked QW_USERNAME_${envKey}, QW_USERNAME_ryan_harthcock, QW_USERNAME)`);
   }
 
   const jar = await step('login', () => loginQw({ tenant: QW_TENANT, username: qwUsername, password: qwPassword }));
@@ -277,6 +286,17 @@ async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride 
   email.to = targetTo;
   email.cc = [];
   email.bcc = [];
+
+  // Override the From address so the quote is delivered under the requested
+  // rep's identity, even when we authenticated as a different user. Also stamp
+  // fromDisplayName when supplied so the header renders nicely (e.g. "Jeff
+  // Horsman <jhorsman@car-o-linersw.com>").
+  if (typeof fromOverride === 'string' && fromOverride.trim()) {
+    email.from = fromOverride.trim();
+  }
+  if (typeof fromDisplayName === 'string' && fromDisplayName.trim()) {
+    email.fromDisplayName = fromDisplayName.trim();
+  }
 
   // SendEmail bundles PDF + hands off to Google SMTP inside QW's process,
   // regularly needs 15-20s. Give it 24s (Netlify function cap is 26s).
