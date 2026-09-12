@@ -168,6 +168,7 @@ async function qwPost(jar, releasePath, apiPath, payload) {
 }
 
 async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride }) {
+  // Per-step timing so a stall in one QW call is diagnosable from the response.
   const timings = [];
   const step = async (name, fn) => {
     const t0 = Date.now();

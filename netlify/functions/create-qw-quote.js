@@ -252,20 +252,61 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
 }
 
 // ---------------------------------------------------------------------------
-// Email the rep. Uses the same SMTP env vars as send-quote.js.
+// Email the rep. Two paths:
+//   1) QW send: log into QW as the rep and drive the internal Deliver → Email
+//      → Send flow (via send-from-rep function). Delivers the actual PDF
+//      quote FROM the rep's Google mailbox with a permanent record in QW.
+//   2) SMTP fallback: notify-only text email through noreply.colsw@gmail.com.
+//      No PDF attachment; used only when the QW send path errors.
 // ---------------------------------------------------------------------------
 async function emailRep({ rep, customer, docNo, docId, quoteUrl, panels }) {
+  const mapped = REP_EMAIL_MAP[rep];
+  const to = mapped || FALLBACK_EMAIL;
+  let qwErr = null;
+
+  // Path 1 — QW send. Preferred: delivers the actual PDF from QW itself.
+  if (docId && rep) {
+    try {
+      // Call our own send-from-rep function. Netlify functions can invoke
+      // one another over the public URL; the site's base URL is in URL env.
+      const siteUrl = process.env.URL || process.env.DEPLOY_URL || 'https://bodyshopequipment.solutions';
+      const resp = await fetch(`${siteUrl}/.netlify/functions/send-from-rep`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          docRecGuid: docId,
+          repUsername: rep,
+          repEmail: to,
+        }),
+        signal: AbortSignal.timeout(25000),
+      });
+      const body = await resp.json().catch(() => ({}));
+      if (resp.ok && body.ok) {
+        return {
+          sent: true,
+          to: body.to,
+          from: body.from,
+          via: 'qw',
+          subject: body.subject,
+          attachments: body.attachments,
+          mapped: !!mapped,
+        };
+      }
+      qwErr = body.error || `http ${resp.status}`;
+    } catch (e) {
+      qwErr = e?.message || String(e);
+    }
+  }
+
+  // Path 2 — SMTP fallback (notify-only, no PDF).
   const {
     SMTP_HOST, SMTP_PORT, SMTP_SECURE,
     SMTP_USER, SMTP_PASS, SMTP_FROM_NAME,
   } = process.env;
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
-    // Email is best-effort — the quote is already created in QW.
-    return { sent: false, to: null, reason: 'SMTP not configured' };
+    return { sent: false, to: null, reason: 'SMTP not configured', qwError: qwErr };
   }
 
-  const mapped = REP_EMAIL_MAP[rep];
-  const to = mapped || FALLBACK_EMAIL;
   const company = (customer && customer.company) || 'Customer';
   const noStr = docNo || '(pending)';
 
@@ -273,7 +314,6 @@ async function emailRep({ rep, customer, docNo, docId, quoteUrl, panels }) {
   const subjectFallback = `Car-O-Liner SW Parts Audit — Quote ${noStr} created — intended for ${rep} — awaiting email lookup`;
   const subject = mapped ? subjectMapped : subjectFallback;
 
-  // Panel summary — brief so the rep can eyeball it in the inbox
   let missingCount = 0, damagedCount = 0, customCount = 0, auditPointsChecked = 0;
   (panels || []).forEach(p => {
     missingCount += (p.missing || []).length;
@@ -285,6 +325,10 @@ async function emailRep({ rep, customer, docNo, docId, quoteUrl, panels }) {
 
   const bodyLines = [
     `A new Parts Audit quote was just created in QuoteWerks Web.`,
+    ``,
+    `NOTE: This is the SMTP fallback notification. The primary QW-send`,
+    `path could not deliver the PDF attachment.`,
+    qwErr ? `Reason: ${qwErr}` : ``,
     ``,
     `Rep:      ${prettyRep(rep)} (${rep})`,
     `Customer: ${company}${customer && customer.city ? ' — ' + customer.city : ''}${customer && customer.state ? ', ' + customer.state : ''}`,
@@ -312,7 +356,7 @@ async function emailRep({ rep, customer, docNo, docId, quoteUrl, panels }) {
     text: bodyLines.join('\n'),
   });
 
-  return { sent: true, to, mapped: !!mapped };
+  return { sent: true, to, via: 'smtp-fallback', mapped: !!mapped, qwError: qwErr };
 }
 
 // ---------------------------------------------------------------------------
