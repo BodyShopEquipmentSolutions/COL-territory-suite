@@ -4,6 +4,6 @@
 
 [functions]
   node_bundler = "esbuild"
-  # QW SendEmail can sit 15-30s server-side; give the whole function 90s.
-  # Requires a Pro+ plan (background functions or synchronous >26s).
-  timeout = 90
+  # Function timeout (90s) is configured in the Netlify UI
+  # (Project configuration -> Functions -> Timeout) because
+  # netlify.toml does not support scalar `timeout` here.
