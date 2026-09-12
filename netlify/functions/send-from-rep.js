@@ -167,7 +167,7 @@ async function qwPost(jar, releasePath, apiPath, payload) {
   return json;
 }
 
-async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride, dryRun }) {
+async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride, dryRun, awaitSend }) {
   // Per-step timing so a stall in one QW call is diagnosable from the response.
   const timings = [];
   const step = async (name, fn, timeoutMs = 20000) => {
@@ -296,29 +296,57 @@ async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride,
   // full response. QW continues processing after we return.
   let sendStatus = 'skipped-dry-run';
   let sendError = null;
+  let sendResponse = null;
   if (!dryRun) {
+    const t0 = Date.now();
     const sendPromise = qwPost(jar, releasePath, 'api/Email/SendEmail', {
       email,
       emailContext: 'EmailQuote',
       docRecGuid,
     }).catch((e) => ({ __err: e?.message || String(e) }));
-    // Race against a 2s window: if QW rejects the request early (400/500 with
-    // a payload error), we surface that. Otherwise we assume it's processing
-    // and return dispatched. We do NOT await the full response.
-    const early = await Promise.race([
-      sendPromise,
-      new Promise((r) => setTimeout(() => r({ __dispatched: true }), 2000)),
-    ]);
-    if (early && early.__dispatched) {
-      sendStatus = 'dispatched';
-      timings.push({ step: 'SendEmail', ms: 2000, ok: true, note: 'fire-and-forget (dispatched)' });
-    } else if (early && early.__err) {
-      sendStatus = 'error';
-      sendError = early.__err;
-      timings.push({ step: 'SendEmail', ms: Date.now() % 100000, ok: false, error: sendError });
+
+    if (awaitSend) {
+      // Diagnostic mode: wait up to 25s for the full SendEmail response so we
+      // can see what QW actually replies with. Only used when the caller
+      // explicitly requests it (?awaitSend=1 query, or awaitSend:true body).
+      const raced = await Promise.race([
+        sendPromise,
+        new Promise((r) => setTimeout(() => r({ __timedOut: true }), 25000)),
+      ]);
+      const ms = Date.now() - t0;
+      if (raced && raced.__timedOut) {
+        sendStatus = 'await-timeout-25s';
+        timings.push({ step: 'SendEmail', ms, ok: false, note: 'awaitSend timed out after 25s' });
+      } else if (raced && raced.__err) {
+        sendStatus = 'error';
+        sendError = raced.__err;
+        timings.push({ step: 'SendEmail', ms, ok: false, error: sendError });
+      } else {
+        sendStatus = 'completed';
+        sendResponse = raced;
+        timings.push({ step: 'SendEmail', ms, ok: true, note: 'awaited full response' });
+      }
     } else {
-      sendStatus = 'completed-fast';
-      timings.push({ step: 'SendEmail', ms: Date.now() % 100000, ok: true, note: 'returned within 2s window' });
+      // Race against a 2s window: if QW rejects the request early (400/500 with
+      // a payload error), we surface that. Otherwise we assume it's processing
+      // and return dispatched. We do NOT await the full response.
+      const early = await Promise.race([
+        sendPromise,
+        new Promise((r) => setTimeout(() => r({ __dispatched: true }), 2000)),
+      ]);
+      const ms = Date.now() - t0;
+      if (early && early.__dispatched) {
+        sendStatus = 'dispatched';
+        timings.push({ step: 'SendEmail', ms, ok: true, note: 'fire-and-forget (dispatched)' });
+      } else if (early && early.__err) {
+        sendStatus = 'error';
+        sendError = early.__err;
+        timings.push({ step: 'SendEmail', ms, ok: false, error: sendError });
+      } else {
+        sendStatus = 'completed-fast';
+        sendResponse = early;
+        timings.push({ step: 'SendEmail', ms, ok: true, note: 'returned within 2s window' });
+      }
     }
   }
 
@@ -345,7 +373,7 @@ async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride,
       bodyPreview: (email.body || '').slice(0, 120),
       subject: email.subject,
     },
-    // sendResponse intentionally omitted — SendEmail is fire-and-forget
+    sendResponse: sendResponse ? (typeof sendResponse === 'object' ? sendResponse : { raw: String(sendResponse).slice(0, 500) }) : null,
     timings,
   };
 }
