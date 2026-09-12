@@ -25,6 +25,9 @@
 
 const QW_HOST = process.env.QW_HOST || 'na.quotewerks.com';
 const QW_TENANT = process.env.QW_TENANT || 'caroliner002';
+// QW rotates the /rXXX/ path on their server upgrades. Default is the current one
+// as of 2026-09; override via QW_RELEASE_PATH env var when it rotates.
+const QW_RELEASE_PATH_DEFAULT = process.env.QW_RELEASE_PATH || '/r26b3b/';
 
 // ---------------------------------------------------------------------------
 // tiny cookie jar
@@ -123,36 +126,23 @@ async function loginQw({ tenant, username, password }) {
 }
 
 async function discoverReleasePath(jar) {
-  // ReleaseRouting stalls waiting for a browser to run JS; instead scan the
-  // login-redirect landing page (or the app root) for the current /rXXX/ path.
-  const candidates = ['/', '/ReleaseRouting/'];
-  for (const path of candidates) {
-    const resp = await fetch(`https://${QW_HOST}${path}`, {
-      headers: {
-        cookie: jar.header(),
-        accept: 'text/html,application/xhtml+xml',
-      },
-      redirect: 'manual',
-      signal: AbortSignal.timeout(10000),
-    }).catch((e) => ({ __err: e }));
-    if (resp.__err) continue;
-    const raw = await extractSetCookie(resp);
-    raw.forEach((c) => jar.ingest(c));
-    // Release paths look like /r26b3a/, /r26b3b/, etc.: /r + digits + lowercase letters.
-    // Must NOT match /ReleaseRouting/, /Resources/, etc.
-    const releaseRe = /(\/r\d\w+?\/)/;
-    // 3xx redirect?
-    const loc = resp.headers.get('location') || '';
-    let m = loc.match(releaseRe);
-    if (m) return m[1];
-    // Body scan (may 200 with meta-refresh or JS href)
-    try {
-      const body = await resp.text();
-      m = body.match(releaseRe);
-      if (m) return m[1];
-    } catch { /* ignore */ }
+  // QW's discovery pages stall waiting for a browser to run JS, so from a
+  // headless function we can't rely on them. Instead: probe a cheap API call
+  // at the last-known release path. If it 200s we're good; if it 404s the
+  // release rotated and we need a human to update QW_RELEASE_PATH.
+  const probe = await fetch(`https://${QW_HOST}${QW_RELEASE_PATH_DEFAULT}api/configurations/getSystemConfigurations`, {
+    headers: {
+      cookie: jar.header(),
+      accept: 'application/json',
+    },
+    signal: AbortSignal.timeout(10000),
+  }).catch((e) => ({ __err: e }));
+  if (!probe || probe.__err) {
+    throw new Error(`release-path probe failed: ${probe && probe.__err ? probe.__err.message : 'no response'}`);
   }
-  throw new Error('could not discover /rXXXX/ release path');
+  if (probe.status === 200) return QW_RELEASE_PATH_DEFAULT;
+  if (probe.status === 401 || probe.status === 403) return QW_RELEASE_PATH_DEFAULT; // auth issue, not path issue
+  throw new Error(`release path ${QW_RELEASE_PATH_DEFAULT} returned ${probe.status}; set QW_RELEASE_PATH env var to current /rXXX/`);
 }
 
 async function qwPost(jar, releasePath, apiPath, payload) {
