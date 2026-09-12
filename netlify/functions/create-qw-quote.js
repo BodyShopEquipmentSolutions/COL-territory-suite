@@ -100,12 +100,31 @@ async function createQuoteForeground(base, apiKey, { rep, customer, panels, site
   }
 
   const quoteUrl = `https://na.quotewerks.com/#/documents/${docId}`;
-  let mail = { sent: false };
+
+  // Always dispatch the QW SendEmail to the background function. QW's
+  // SendEmail RPC takes 20-30s to actually process the send — too long for
+  // a 26s foreground budget, and if we don't hold the connection open the
+  // send gets silently dropped. The background function has 15 minutes to
+  // wait on the response.
+  const site = siteUrl || process.env.URL || process.env.DEPLOY_URL || 'https://colswsalesandserviceapp.netlify.app';
+  const emailPayload = {
+    emailOnly: true,
+    docId, docNo, rep, customer: fullCustomer, panels,
+  };
+  let mail = { sent: false, backgrounded: true, note: 'PDF email dispatched to background function' };
   try {
-    mail = await emailRep({ rep, customer: fullCustomer, docNo, docId, quoteUrl, panels, base, apiKey, siteUrl });
-  } catch (mailErr) {
-    mail = { sent: false, error: mailErr.message };
+    const resp = await fetch(`${site}/.netlify/functions/create-qw-quote-background`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(emailPayload),
+      signal: AbortSignal.timeout(8000),
+    });
+    mail.bgQueued = (resp.status === 202 || resp.ok);
+    if (!mail.bgQueued) mail.backgroundStatus = resp.status;
+  } catch (e) {
+    mail.backgroundError = (e?.message || String(e)).slice(0, 200);
   }
+
   return { docId, docNo, quoteUrl, mail, diag };
 }
 

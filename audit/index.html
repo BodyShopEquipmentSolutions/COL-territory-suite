@@ -1133,12 +1133,12 @@ function viewSuccess(){
 
   let statusBlock;
   if (r.backgrounded) {
-    // Background job in flight — lines + PDF are being added by the server.
+    // Big quote — lines + PDF are being added by the server.
     const bg = r.bgStatus || {};
     const totalItems = r.itemCount || 0;
     const done = bg.itemCount || 0;
-    // Rough time expectation: ~0.5s per line + 5s email = a minute for 100 lines.
-    const etaSec = Math.max(15, Math.ceil(totalItems * 0.6) + 5);
+    // Rough ETA: ~0.5s per line + ~30s for QW SendEmail.
+    const etaSec = Math.max(45, Math.ceil(totalItems * 0.6) + 35);
     const progressLine = totalItems
       ? `<div class="hint">${done}/${totalItems} lines added${done < totalItems ? ' — still working…' : ''}</div>`
       : '<div class="hint">Building lines and preparing the PDF…</div>';
@@ -1148,6 +1148,10 @@ function viewSuccess(){
     `;
   } else if (mail.backgroundedDone) {
     statusBlock = `<div class="hint">All lines added. PDF email sent from QuoteWerks.</div>`;
+  } else if (mail.backgrounded) {
+    // Small quote path — lines are already in QW, PDF email is dispatched to
+    // background and typically arrives in 30-40 seconds.
+    statusBlock = `<div class="hint">PDF email dispatched from QuoteWerks — expect it in about 30-40 seconds.</div>`;
   } else if (mail.sent) {
     statusBlock = `<div class="hint">Email sent to <strong>${escapeHtml(mail.to || '')}</strong>${mail.mapped ? '' : ' <span style="color:var(--warn)">(fallback inbox — rep email not yet mapped)</span>'}.</div>`;
   } else {

@@ -447,11 +447,16 @@ export async function emailRep({ rep, customer, docNo, docId, quoteUrl, panels, 
   if (docId && rep) {
     try {
       const site = siteUrl || process.env.URL || process.env.DEPLOY_URL || 'https://bodyshopequipment.solutions';
+      // Await the full QW SendEmail response — fire-and-forget doesn't work,
+      // QW silently drops the send if you don't hold the connection open.
+      // The QW SendEmail RPC typically takes 20-30s. Give ourselves 40s to
+      // cover that (fine here because emailRep is called from the -background
+      // function, which has a 15-min budget).
       const resp = await fetch(`${site}/.netlify/functions/send-from-rep`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ docRecGuid: docId, repUsername: rep, repEmail: to }),
-        signal: AbortSignal.timeout(15000),
+        body: JSON.stringify({ docRecGuid: docId, repUsername: rep, repEmail: to, awaitSend: true }),
+        signal: AbortSignal.timeout(45000),
       });
       const body = await resp.json().catch(() => ({}));
       if (resp.ok && body.ok) {

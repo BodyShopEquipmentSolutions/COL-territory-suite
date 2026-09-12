@@ -39,13 +39,13 @@ export const handler = async (event) => {
   try { payload = JSON.parse(event.body || '{}'); }
   catch (e) { console.error('bad json', e); return { statusCode: 400 }; }
 
-  const { docId, docNo, rep, customer, panels } = payload;
-  if (!docId || !rep || !panels) {
-    console.error('background: missing required fields', { hasDocId: !!docId, hasRep: !!rep, hasPanels: !!panels });
+  const { docId, docNo, rep, customer, panels, emailOnly } = payload;
+  if (!docId || !rep) {
+    console.error('background: missing required fields', { hasDocId: !!docId, hasRep: !!rep });
     return { statusCode: 400 };
   }
   const itemCount = totalPanelItems(panels);
-  console.log(`bg-quote start docId=${docId} docNo=${docNo} rep=${rep} items=${itemCount}`);
+  console.log(`bg-quote start docId=${docId} docNo=${docNo} rep=${rep} items=${itemCount} emailOnly=${!!emailOnly}`);
 
   const diag = {
     productLookups: 0,
@@ -53,17 +53,23 @@ export const handler = async (event) => {
     productMisses: [],
   };
 
-  // Build + insert lines.
-  try {
-    const plan = await buildLinePlan(base, QW_API_KEY, panels, diag);
-    console.log(`bg-quote docNo=${docNo} plan=${plan.length} prewarmed=${diag.bulkPrewarmed} lookups=${diag.productLookups} hits=${diag.productHits} misses=${diag.productMisses.length}`);
-    await insertLinesSequential(base, QW_API_KEY, docId, plan, diag);
-    console.log(`bg-quote docNo=${docNo} inserted=${diag.linesInserted}/${diag.linesPlanned} errors=${diag.insertErrors.length}`);
-    if (diag.insertErrors.length) {
-      console.warn(`bg-quote docNo=${docNo} insertErrors:`, JSON.stringify(diag.insertErrors.slice(0, 10)));
+  // Build + insert lines (skipped when emailOnly — foreground already did this).
+  if (!emailOnly) {
+    if (!panels) {
+      console.error('background: panels required when not emailOnly');
+      return { statusCode: 400 };
     }
-  } catch (e) {
-    console.error(`bg-quote docNo=${docNo} plan/insert failed:`, e.message);
+    try {
+      const plan = await buildLinePlan(base, QW_API_KEY, panels, diag);
+      console.log(`bg-quote docNo=${docNo} plan=${plan.length} prewarmed=${diag.bulkPrewarmed} lookups=${diag.productLookups} hits=${diag.productHits} misses=${diag.productMisses.length}`);
+      await insertLinesSequential(base, QW_API_KEY, docId, plan, diag);
+      console.log(`bg-quote docNo=${docNo} inserted=${diag.linesInserted}/${diag.linesPlanned} errors=${diag.insertErrors.length}`);
+      if (diag.insertErrors.length) {
+        console.warn(`bg-quote docNo=${docNo} insertErrors:`, JSON.stringify(diag.insertErrors.slice(0, 10)));
+      }
+    } catch (e) {
+      console.error(`bg-quote docNo=${docNo} plan/insert failed:`, e.message);
+    }
   }
 
   // Send the PDF via QW (or SMTP fallback). The header already exists so this
