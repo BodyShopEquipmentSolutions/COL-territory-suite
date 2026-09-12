@@ -4,6 +4,12 @@
 
 [functions]
   node_bundler = "esbuild"
-  # Function timeout (90s) is configured in the Netlify UI
-  # (Project configuration -> Functions -> Timeout) because
-  # netlify.toml does not support scalar `timeout` here.
+
+# Per-function timeout. Synchronous Netlify functions cap at 60s (see Netlify
+# docs / community threads). QW SendEmail regularly needs 15-30s and can spike;
+# 60s gives us the widest sync headroom before we'd need a background function.
+[functions."send-from-rep"]
+  timeout = 60
+
+[functions."create-qw-quote"]
+  timeout = 60

@@ -485,10 +485,10 @@ async function emailRep({ rep, docId, base, apiKey }) {
         repUsername: rep,
         repEmail: to,
       }),
-      // send-from-rep now runs under a 90s function timeout; give this outer
-      // fetch 88s so the caller sees the real error from the inner function
-      // instead of a premature AbortError.
-      signal: AbortSignal.timeout(88000),
+      // send-from-rep runs under a 60s function timeout (per-function in
+      // netlify.toml). Give this outer fetch 58s so the caller sees the
+      // real error from the inner function instead of a premature AbortError.
+      signal: AbortSignal.timeout(58000),
     });
     const body = await resp.json().catch(() => ({}));
     if (resp.ok && body.ok) {

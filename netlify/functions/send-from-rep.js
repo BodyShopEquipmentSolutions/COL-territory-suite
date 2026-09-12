@@ -299,13 +299,14 @@ async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride,
   }
 
   // SendEmail bundles PDF + hands off to Google SMTP inside QW's process,
-  // regularly needs 15-30s and can spike to 60s. Give it 80s of headroom now
-  // that the function-level timeout is bumped to 90s in netlify.toml.
+  // regularly needs 15-30s. Function-level timeout is 60s (per-function in
+  // netlify.toml, Netlify sync max). Give SendEmail 52s of headroom so login
+  // + release-probe + layout + generate + composer can still fit under 60s.
   const sendResp = await step('SendEmail', () => qwPost(jar, releasePath, 'api/Email/SendEmail', {
     email,
     emailContext: 'EmailQuote',
     docRecGuid,
-  }), 80000);
+  }), 52000);
 
   return {
     ok: true,
