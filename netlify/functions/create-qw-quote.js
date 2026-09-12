@@ -100,11 +100,12 @@ function nowIso() {
 }
 
 // QW SoldTo* column max lengths. QW rejects any value longer than these.
+// Column widths per DocumentHeaders schema (NVARCHAR sizes).
 const SOLD_TO_MAX = {
-  SoldToCompany: 50, SoldToContact: 50,
-  SoldToAddress1: 50, SoldToAddress2: 50, SoldToAddress3: 50,
-  SoldToCity: 50, SoldToState: 20, SoldToZip: 20, SoldToCountry: 50,
-  SoldToPhone: 20, SoldToFax: 20, SoldToEmail: 100,
+  SoldToCompany: 50, SoldToContact: 40,
+  SoldToAddress1: 40, SoldToAddress2: 40, SoldToAddress3: 50,
+  SoldToCity: 31, SoldToState: 21, SoldToPostalCode: 13, SoldToCountry: 50,
+  SoldToPhone: 20, SoldToFax: 20, SoldToEmail: 255,
 };
 function clip(field, val) {
   if (val == null) return val;
@@ -224,8 +225,9 @@ async function createHeader(base, apiKey, { rep, customer }) {
     if (customer.fax)      attrs.SoldToFax      = clip('SoldToFax',      customer.fax);
     if (customer.address)  attrs.SoldToAddress1 = clip('SoldToAddress1', customer.address);
     if (customer.address2) attrs.SoldToAddress2 = clip('SoldToAddress2', customer.address2);
-    if (customer.zip)      attrs.SoldToZip      = clip('SoldToZip',      customer.zip);
-    if (customer.country)  attrs.SoldToCountry  = clip('SoldToCountry',  customer.country);
+    // QW's field is SoldToPostalCode, NOT SoldToZip.
+    if (customer.zip)      attrs.SoldToPostalCode = clip('SoldToPostalCode', customer.zip);
+    if (customer.country)  attrs.SoldToCountry    = clip('SoldToCountry',    customer.country);
     if (customer.contact || customer.attention)
       attrs.SoldToContact = clip('SoldToContact', customer.contact || customer.attention);
     // SoldToEmail intentionally left blank — see enrichCustomer() note.
@@ -258,9 +260,34 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
   if (!rep) throw new Error('rep is required');
   if (!panels || !panels.length) throw new Error('At least one audit panel is required');
 
+  // Diagnostics we return on the response so the caller can see whether
+  // enrichment and pricing lookups actually happened.
+  const diag = {
+    customerIn: customer ? Object.keys(customer).sort() : null,
+    enrichAttempted: false,
+    enrichHit: false,
+    enrichError: null,
+    contactHit: false,
+    productLookups: 0,
+    productHits: 0,
+  };
+
   // Enrich the customer object with the full CRMCompanies + primary contact record
   // before creating the header, so SoldTo* fields aren't empty.
-  const fullCustomer = await enrichCustomer(base, apiKey, customer);
+  let fullCustomer = customer;
+  if (customer && customer.id) {
+    diag.enrichAttempted = true;
+    try {
+      const enriched = await enrichCustomer(base, apiKey, customer);
+      if (enriched && enriched !== customer) {
+        diag.enrichHit = true;
+        diag.contactHit = !!(enriched.contact && enriched.contact !== customer.contact);
+      }
+      fullCustomer = enriched;
+    } catch (e) {
+      diag.enrichError = e?.message || String(e);
+    }
+  }
   const header = await createHeader(base, apiKey, { rep, customer: fullCustomer });
   const docId = header.id;
 
@@ -312,7 +339,9 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
     // Products_AllProducts_Products and stamp them on the line.
     for (const rollup of rollups.values()) {
       const billableQty = rollup.isExpanded ? 1 : (Number(rollup.leaves[0].qty) || 1);
+      diag.productLookups += 1;
       const prod = await lookupProduct(base, apiKey, rollup.partNumber, productCache);
+      if (prod) diag.productHits += 1;
       plan.push({
         LineType: 1,
         Manufacturer: prod?.manufacturer || 'COL',
@@ -327,7 +356,9 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
     }
     for (const it of custom) {
       const pn = it.partNumber || (it.id ? `CAR${it.id}` : '');
+      diag.productLookups += 1;
       const prod = await lookupProduct(base, apiKey, pn, productCache);
+      if (prod) diag.productHits += 1;
       plan.push({
         LineType: 1,
         Manufacturer: prod?.manufacturer || 'COL',
@@ -359,7 +390,7 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
       // Non-fatal — the quote exists; we just don't have the human number.
     }
   }
-  return { docId, docNo: docNo || null };
+  return { docId, docNo: docNo || null, diag };
 }
 
 // ---------------------------------------------------------------------------
@@ -507,7 +538,7 @@ export const handler = async (event) => {
 
     if (action === 'create_quote') {
       const { rep, customer, panels } = payload;
-      const { docId, docNo } = await createQuote(base, QW_API_KEY, { rep, customer, panels });
+      const { docId, docNo, diag } = await createQuote(base, QW_API_KEY, { rep, customer, panels });
       const quoteUrl = `https://na.quotewerks.com/#/documents/${docId}`;
       let mail = { sent: false };
       try {
@@ -519,7 +550,7 @@ export const handler = async (event) => {
       return {
         statusCode: 200,
         headers: cors,
-        body: JSON.stringify({ ok: true, docId, docNo, quoteUrl, mail }),
+        body: JSON.stringify({ ok: true, docId, docNo, quoteUrl, mail, diag }),
       };
     }
 
