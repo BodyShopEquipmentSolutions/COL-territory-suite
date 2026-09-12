@@ -8,10 +8,10 @@
 // Required Netlify environment variables:
 //   QW_API_KEY   the QuoteWerks Web REST API key (must be set on Netlify)
 //   QW_API_BASE  defaults to https://qwwapi.quotewerks.com when unset
-//   SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS, SMTP_FROM_NAME
+//   (no SMTP env needed — QW is the only email path)
 //                (reused from send-quote.js — same shared mailbox)
 
-import nodemailer from 'nodemailer';
+
 
 const QW_BASE_DEFAULT = 'https://qwwapi.quotewerks.com';
 
@@ -459,117 +459,66 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
 }
 
 // ---------------------------------------------------------------------------
-// Email the rep. Two paths:
-//   1) QW send: log into QW as the rep and drive the internal Deliver → Email
-//      → Send flow (via send-from-rep function). Delivers the actual PDF
-//      quote FROM the rep's Google mailbox with a permanent record in QW.
-//   2) SMTP fallback: notify-only text email through noreply.colsw@gmail.com.
-//      No PDF attachment; used only when the QW send path errors.
+// Email the rep via QW. Logs into QW as the rep and drives the internal
+// Deliver → Email → Send flow (via send-from-rep function). Delivers the
+// actual PDF quote from the rep's Google mailbox with a permanent record
+// in QW. If QW SendEmail fails, we surface the error — no SMTP fallback,
+// no cover-up. Ryan wants to see the real failure so QW-side issues get
+// noticed instead of masked.
 // ---------------------------------------------------------------------------
-async function emailRep({ rep, customer, docNo, docId, quoteUrl, panels, base, apiKey }) {
+async function emailRep({ rep, docId, base, apiKey }) {
   const resolved = await resolveRepEmail(base, apiKey, rep);
   const to = resolved.email;
   const mapped = resolved.source === 'qw:UserSettings';
-  let qwErr = null;
 
-  // Path 1 — QW send. Preferred: delivers the actual PDF from QW itself.
-  if (docId && rep) {
-    try {
-      // Call our own send-from-rep function. Netlify functions can invoke
-      // one another over the public URL; the site's base URL is in URL env.
-      const siteUrl = process.env.URL || process.env.DEPLOY_URL || 'https://bodyshopequipment.solutions';
-      // send-from-rep is now fire-and-forget on the QW SendEmail step, so it
-      // returns in ~5-8s (login + deliver init + PDF gen + composer + 2s
-      // dispatch window). Give it 12s of slack. Netlify function total cap
-      // is 26s and create-qw-quote may spend some of that on line inserts.
-      const resp = await fetch(`${siteUrl}/.netlify/functions/send-from-rep`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          docRecGuid: docId,
-          repUsername: rep,
-          repEmail: to,
-        }),
-        signal: AbortSignal.timeout(15000),
-      });
-      const body = await resp.json().catch(() => ({}));
-      if (resp.ok && body.ok) {
-        return {
-          sent: true,
-          to: body.to,
-          from: body.from,
-          via: 'qw',
-          subject: body.subject,
-          attachments: body.attachments,
-          mapped: !!mapped,
-          emailSource: resolved.source,
-        };
-      }
-      qwErr = body.error || `http ${resp.status}`;
-    } catch (e) {
-      qwErr = e?.message || String(e);
+  if (!docId || !rep) {
+    return { sent: false, to: null, error: 'missing docId or rep', mapped: !!mapped, emailSource: resolved.source };
+  }
+
+  const siteUrl = process.env.URL || process.env.DEPLOY_URL || 'https://bodyshopequipment.solutions';
+  try {
+    const resp = await fetch(`${siteUrl}/.netlify/functions/send-from-rep`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        docRecGuid: docId,
+        repUsername: rep,
+        repEmail: to,
+      }),
+      // send-from-rep may sit on the SendEmail RPC up to ~24s; give it
+      // 25s of slack. Netlify function total cap here is 26s.
+      signal: AbortSignal.timeout(25000),
+    });
+    const body = await resp.json().catch(() => ({}));
+    if (resp.ok && body.ok) {
+      return {
+        sent: true,
+        to: body.to,
+        from: body.from,
+        via: 'qw',
+        subject: body.subject,
+        attachments: body.attachments,
+        mapped: !!mapped,
+        emailSource: resolved.source,
+      };
     }
+    return {
+      sent: false,
+      to,
+      error: body.error || `http ${resp.status}`,
+      timings: body.timings,
+      mapped: !!mapped,
+      emailSource: resolved.source,
+    };
+  } catch (e) {
+    return {
+      sent: false,
+      to,
+      error: e?.message || String(e),
+      mapped: !!mapped,
+      emailSource: resolved.source,
+    };
   }
-
-  // Path 2 — SMTP fallback (notify-only, no PDF).
-  const {
-    SMTP_HOST, SMTP_PORT, SMTP_SECURE,
-    SMTP_USER, SMTP_PASS, SMTP_FROM_NAME,
-  } = process.env;
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
-    return { sent: false, to: null, reason: 'SMTP not configured', qwError: qwErr };
-  }
-
-  const company = (customer && customer.company) || 'Customer';
-  const noStr = docNo || '(pending)';
-
-  const subjectMapped = `Car-O-Liner SW Parts Audit — Quote ${noStr} created for ${company}`;
-  const subjectFallback = `Car-O-Liner SW Parts Audit — Quote ${noStr} created — intended for ${rep} — awaiting email lookup`;
-  const subject = mapped ? subjectMapped : subjectFallback;
-
-  let missingCount = 0, damagedCount = 0, customCount = 0, auditPointsChecked = 0;
-  (panels || []).forEach(p => {
-    missingCount += (p.missing || []).length;
-    damagedCount += (p.damaged || []).length;
-    customCount  += (p.custom  || []).length;
-    auditPointsChecked += Number(p.auditPointsChecked) || 0;
-  });
-  const flaggedCount = missingCount + damagedCount + customCount;
-
-  const bodyLines = [
-    `A new Parts Audit quote was just created in QuoteWerks Web.`,
-    ``,
-    `NOTE: This is the SMTP fallback notification. The primary QW-send`,
-    `path could not deliver the PDF attachment.`,
-    qwErr ? `Reason: ${qwErr}` : ``,
-    ``,
-    `Rep:      ${prettyRep(rep)} (${rep})`,
-    `Customer: ${company}${customer && customer.city ? ' — ' + customer.city : ''}${customer && customer.state ? ', ' + customer.state : ''}`,
-    `Quote:    ${noStr}`,
-    `Panels:   ${(panels || []).length}   Missing: ${missingCount}   Damaged: ${damagedCount}   Custom: ${customCount}`,
-    `Audit:    ${auditPointsChecked} audit points checked   ${flaggedCount} items flagged`,
-    ``,
-    `Open in QuoteWerks Web:`,
-    quoteUrl,
-    ``,
-    `— Car-O-Liner SW Parts Audit app`,
-  ];
-
-  const transporter = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: Number(SMTP_PORT) || 465,
-    secure: String(SMTP_SECURE || 'true') === 'true',
-    auth: { user: SMTP_USER, pass: SMTP_PASS },
-  });
-
-  await transporter.sendMail({
-    from: `"${SMTP_FROM_NAME || 'Car-O-Liner Southwest'}" <${SMTP_USER}>`,
-    to,
-    subject,
-    text: bodyLines.join('\n'),
-  });
-
-  return { sent: true, to, via: 'smtp-fallback', mapped: !!mapped, qwError: qwErr };
 }
 
 // ---------------------------------------------------------------------------
@@ -613,7 +562,7 @@ export const handler = async (event) => {
       const quoteUrl = `https://na.quotewerks.com/#/documents/${docId}`;
       let mail = { sent: false };
       try {
-        mail = await emailRep({ rep, customer, docNo, docId, quoteUrl, panels, base, apiKey: QW_API_KEY });
+        mail = await emailRep({ rep, docId, base, apiKey: QW_API_KEY });
       } catch (mailErr) {
         // Don't fail the whole call if email dies — the quote exists.
         mail = { sent: false, error: mailErr.message };
