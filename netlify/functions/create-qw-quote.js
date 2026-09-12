@@ -101,14 +101,106 @@ function nowIso() {
 
 // QW SoldTo* column max lengths. QW rejects any value longer than these.
 const SOLD_TO_MAX = {
-  SoldToCompany: 50, SoldToContact: 50, SoldToAddress1: 50, SoldToCity: 50,
-  SoldToState: 20, SoldToZip: 20, SoldToPhone: 20, SoldToEmail: 100,
+  SoldToCompany: 50, SoldToContact: 50,
+  SoldToAddress1: 50, SoldToAddress2: 50, SoldToAddress3: 50,
+  SoldToCity: 50, SoldToState: 20, SoldToZip: 20, SoldToCountry: 50,
+  SoldToPhone: 20, SoldToFax: 20, SoldToEmail: 100,
 };
 function clip(field, val) {
   if (val == null) return val;
   const s = String(val);
   const max = SOLD_TO_MAX[field];
   return max && s.length > max ? s.slice(0, max) : s;
+}
+
+// ---------------------------------------------------------------------------
+// Look up a product by ManufacturerPartNumber. Returns { manufacturer, description,
+// price, cost, list } or null. Tries the raw SKU first, then a dash-normalized
+// variant (CARNA90586 <-> CARNA-90586) because QW's data has both patterns.
+// Cache within a single request so repeated parts don't re-hit the API.
+// ---------------------------------------------------------------------------
+async function lookupProduct(base, apiKey, partNumber, cache) {
+  const key = String(partNumber || '').trim();
+  if (!key) return null;
+  if (cache && cache.has(key)) return cache.get(key);
+  const variants = [key];
+  // Insert-or-remove dash after a leading letter run (e.g. CARNA90586 -> CARNA-90586)
+  const m = key.match(/^([A-Za-z]+)(\d.*)$/);
+  if (m) variants.push(`${m[1]}-${m[2]}`);
+  if (key.includes('-')) variants.push(key.replace(/-/g, ''));
+  let hit = null;
+  for (const val of variants) {
+    if (hit) break;
+    for (const field of ['ManufacturerPartNumber', 'VendorPartNumber']) {
+      const body = {
+        filter: [{ name: field, op: 'eq', val }],
+        page: { size: 1 },
+        fields: { Products_AllProducts_Products: [
+          'ManufacturerPartNumber','Manufacturer','Description','Price','Cost','List',
+        ] },
+      };
+      try {
+        const res = await qwFetch(base, apiKey, '/api/v1/qw/tables/Products_AllProducts_Products/search', { method: 'POST', body });
+        const rows = Array.isArray(res && res.data) ? res.data : [];
+        if (rows.length) { hit = rows[0].attributes || {}; break; }
+      } catch { /* keep trying */ }
+    }
+  }
+  const out = hit ? {
+    manufacturer: hit.Manufacturer || '',
+    description: hit.Description || '',
+    price: Number(hit.Price) || 0,
+    cost:  Number(hit.Cost)  || 0,
+    list:  Number(hit.List)  || 0,
+  } : null;
+  if (cache) cache.set(key, out);
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Fetch the full CRMCompanies record + PrimaryContact for a customer.id and
+// merge it into the customer object the frontend sent, keeping frontend values
+// as the authoritative source when both exist.
+// ---------------------------------------------------------------------------
+async function enrichCustomer(base, apiKey, customer) {
+  if (!customer || !customer.id) return customer || null;
+  let company = null;
+  try {
+    const res = await qwFetch(base, apiKey,
+      `/api/v1/qw/tables/CRMCompanies/${encodeURIComponent(customer.id)}`);
+    company = res && res.data && res.data.attributes ? res.data.attributes : null;
+  } catch { /* leave null; we'll fall back to what the frontend sent */ }
+  if (!company) return customer;
+  // Try to also pull the primary contact's name for SoldToContact.
+  let contactName = '';
+  const contactRecGuid = company.PrimaryContactRecGUID;
+  if (contactRecGuid) {
+    try {
+      const res = await qwFetch(base, apiKey,
+        `/api/v1/qw/tables/CRMContacts/${encodeURIComponent(contactRecGuid)}`);
+      const a = res && res.data && res.data.attributes ? res.data.attributes : {};
+      contactName = a.ContactName ||
+        [a.FirstName, a.LastName].filter(Boolean).join(' ') || '';
+    } catch { /* optional */ }
+  }
+  // Merge — frontend value wins if present and non-empty; otherwise use QW record.
+  const pick = (frontVal, qwVal) => (frontVal && String(frontVal).trim()) ? frontVal : (qwVal || '');
+  return {
+    ...customer,
+    company: pick(customer.company || customer.customer, company.CompanyName),
+    contact: pick(customer.contact || customer.attention, contactName),
+    address: pick(customer.address, company.Address1),
+    address2: pick(customer.address2, company.Address2),
+    city:    pick(customer.city, company.City),
+    state:   pick(customer.state, company.State),
+    zip:     pick(customer.zip, company.PostalCode),
+    country: pick(customer.country, company.Country),
+    phone:   pick(customer.phone, company.PhoneMain),
+    fax:     pick(customer.fax, company.Fax),
+    // SoldToEmail intentionally NOT populated — the send-from-rep flow always
+    // sends to the rep, and QW's Deliver dialog would otherwise auto-populate
+    // this field with the customer's email, risking accidental customer sends.
+  };
 }
 
 async function createHeader(base, apiKey, { rep, customer }) {
@@ -125,15 +217,18 @@ async function createHeader(base, apiKey, { rep, customer }) {
   };
   if (customer) {
     const company = customer.company || customer.customer;
-    if (company)          attrs.SoldToCompany  = clip('SoldToCompany',  company);
-    if (customer.city)    attrs.SoldToCity     = clip('SoldToCity',     customer.city);
-    if (customer.state)   attrs.SoldToState    = clip('SoldToState',    customer.state);
-    if (customer.phone)   attrs.SoldToPhone    = clip('SoldToPhone',    customer.phone);
-    if (customer.email)   attrs.SoldToEmail    = clip('SoldToEmail',    customer.email);
-    if (customer.address) attrs.SoldToAddress1 = clip('SoldToAddress1', customer.address);
-    if (customer.zip)     attrs.SoldToZip      = clip('SoldToZip',      customer.zip);
+    if (company)           attrs.SoldToCompany  = clip('SoldToCompany',  company);
+    if (customer.city)     attrs.SoldToCity     = clip('SoldToCity',     customer.city);
+    if (customer.state)    attrs.SoldToState    = clip('SoldToState',    customer.state);
+    if (customer.phone)    attrs.SoldToPhone    = clip('SoldToPhone',    customer.phone);
+    if (customer.fax)      attrs.SoldToFax      = clip('SoldToFax',      customer.fax);
+    if (customer.address)  attrs.SoldToAddress1 = clip('SoldToAddress1', customer.address);
+    if (customer.address2) attrs.SoldToAddress2 = clip('SoldToAddress2', customer.address2);
+    if (customer.zip)      attrs.SoldToZip      = clip('SoldToZip',      customer.zip);
+    if (customer.country)  attrs.SoldToCountry  = clip('SoldToCountry',  customer.country);
     if (customer.contact || customer.attention)
       attrs.SoldToContact = clip('SoldToContact', customer.contact || customer.attention);
+    // SoldToEmail intentionally left blank — see enrichCustomer() note.
     if (customer.id) attrs.SoldToCMCompanyRecID = String(customer.id);
   }
   const body = { data: { type: 'DocumentHeaders', attributes: attrs } };
@@ -163,8 +258,14 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
   if (!rep) throw new Error('rep is required');
   if (!panels || !panels.length) throw new Error('At least one audit panel is required');
 
-  const header = await createHeader(base, apiKey, { rep, customer });
+  // Enrich the customer object with the full CRMCompanies + primary contact record
+  // before creating the header, so SoldTo* fields aren't empty.
+  const fullCustomer = await enrichCustomer(base, apiKey, customer);
+  const header = await createHeader(base, apiKey, { rep, customer: fullCustomer });
   const docId = header.id;
+
+  // Product lookup cache shared across the whole quote.
+  const productCache = new Map();
 
   // Build the FULL line plan up front, then dispatch in parallel.
   const plan = [];
@@ -206,27 +307,37 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
       rollups.get(key).leaves.push(it);
     });
     // One line per unique parent SKU. QW's REST API stores whatever fields
-    // you send verbatim — it does NOT pull from the product database on POST.
+    // you send verbatim — it does NOT pull from the product database on POST,
+    // so we resolve pricing/manufacturer/description ourselves from
+    // Products_AllProducts_Products and stamp them on the line.
     for (const rollup of rollups.values()) {
       const billableQty = rollup.isExpanded ? 1 : (Number(rollup.leaves[0].qty) || 1);
+      const prod = await lookupProduct(base, apiKey, rollup.partNumber, productCache);
       plan.push({
         LineType: 1,
-        Manufacturer: 'CAR',
+        Manufacturer: prod?.manufacturer || 'COL',
         ManufacturerPartNumber: rollup.partNumber,
         PartNumber: rollup.partNumber,
-        Description: rollup.description,
+        Description: prod?.description || rollup.description,
         QtyBase: billableQty,
+        UnitPrice: prod?.price || 0,
+        UnitCost:  prod?.cost  || 0,
+        UnitList:  prod?.list  || prod?.price || 0,
       });
     }
     for (const it of custom) {
       const pn = it.partNumber || (it.id ? `CAR${it.id}` : '');
+      const prod = await lookupProduct(base, apiKey, pn, productCache);
       plan.push({
         LineType: 1,
-        Manufacturer: 'CAR',
+        Manufacturer: prod?.manufacturer || 'COL',
         ManufacturerPartNumber: pn,
         PartNumber: pn,
-        Description: it.description || '',
+        Description: prod?.description || it.description || '',
         QtyBase: Number(it.qty) || 1,
+        UnitPrice: prod?.price || 0,
+        UnitCost:  prod?.cost  || 0,
+        UnitList:  prod?.list  || prod?.price || 0,
       });
     }
   }
