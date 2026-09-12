@@ -450,6 +450,10 @@ async function emailRep({ rep, customer, docNo, docId, quoteUrl, panels }) {
       // Call our own send-from-rep function. Netlify functions can invoke
       // one another over the public URL; the site's base URL is in URL env.
       const siteUrl = process.env.URL || process.env.DEPLOY_URL || 'https://bodyshopequipment.solutions';
+      // send-from-rep is now fire-and-forget on the QW SendEmail step, so it
+      // returns in ~5-8s (login + deliver init + PDF gen + composer + 2s
+      // dispatch window). Give it 12s of slack. Netlify function total cap
+      // is 26s and create-qw-quote may spend some of that on line inserts.
       const resp = await fetch(`${siteUrl}/.netlify/functions/send-from-rep`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -458,7 +462,7 @@ async function emailRep({ rep, customer, docNo, docId, quoteUrl, panels }) {
           repUsername: rep,
           repEmail: to,
         }),
-        signal: AbortSignal.timeout(25000),
+        signal: AbortSignal.timeout(15000),
       });
       const body = await resp.json().catch(() => ({}));
       if (resp.ok && body.ok) {
