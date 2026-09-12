@@ -402,12 +402,16 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
     // you send verbatim — it does NOT pull from the product database on POST,
     // so we resolve pricing/manufacturer/description ourselves from
     // Products_AllProducts_Products and stamp them on the line.
-    for (const rollup of rollups.values()) {
-      const billableQty = rollup.isExpanded ? 1 : (Number(rollup.leaves[0].qty) || 1);
+    // Parallelize product lookups (with productCache dedupe) — 74 items
+    // sequentially blows past Netlify's 26s ceiling; concurrent lookups
+    // finish in a couple seconds.
+    const rollupsArr = Array.from(rollups.values());
+    const rollupResolved = await Promise.all(rollupsArr.map(async (rollup) => {
       diag.productLookups += 1;
       const prod = await lookupProduct(base, apiKey, rollup.partNumber, productCache, diag.productMisses);
       if (prod) diag.productHits += 1;
-      plan.push({
+      const billableQty = rollup.isExpanded ? 1 : (Number(rollup.leaves[0].qty) || 1);
+      return {
         LineType: 1,
         Manufacturer: prod?.manufacturer || 'COL',
         ManufacturerPartNumber: rollup.partNumber,
@@ -417,14 +421,16 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
         UnitPrice: prod?.price || 0,
         UnitCost:  prod?.cost  || 0,
         UnitList:  prod?.list  || prod?.price || 0,
-      });
-    }
-    for (const it of custom) {
+      };
+    }));
+    plan.push(...rollupResolved);
+
+    const customResolved = await Promise.all(custom.map(async (it) => {
       const pn = it.partNumber || (it.id ? `CAR${it.id}` : '');
       diag.productLookups += 1;
       const prod = await lookupProduct(base, apiKey, pn, productCache, diag.productMisses);
       if (prod) diag.productHits += 1;
-      plan.push({
+      return {
         LineType: 1,
         Manufacturer: prod?.manufacturer || 'COL',
         ManufacturerPartNumber: pn,
@@ -434,14 +440,18 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
         UnitPrice: prod?.price || 0,
         UnitCost:  prod?.cost  || 0,
         UnitList:  prod?.list  || prod?.price || 0,
-      });
-    }
+      };
+    }));
+    plan.push(...customResolved);
   }
 
-  // Sequential insert preserves LineNumberActual assignment order in QW.
-  // The frontend collapses whole-assembly rollups so this loop stays small.
-  for (let i = 0; i < plan.length; i++) {
-    await createLine(base, apiKey, docId, { LineNumberActual: i + 1, ...plan[i] });
+  // Bounded-concurrency line insert. LineNumberActual is assigned up-front
+  // by index so order is preserved even though requests overlap.
+  const CONCURRENCY = 8;
+  const numbered = plan.map((p, i) => ({ LineNumberActual: i + 1, ...p }));
+  for (let start = 0; start < numbered.length; start += CONCURRENCY) {
+    const batch = numbered.slice(start, start + CONCURRENCY);
+    await Promise.all(batch.map(row => createLine(base, apiKey, docId, row)));
   }
 
   // Re-fetch header to pick up the DocNo (assigned server-side on create in
