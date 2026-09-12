@@ -120,6 +120,8 @@ async function createHeader(base, apiKey, { rep, customer }) {
     DocStatus: 'Open',
     DocDate: nowIso(),
     SalesRep: rep,
+    PreparedBy: rep,
+    CreatedBy: rep,
   };
   if (customer) {
     const company = customer.company || customer.customer;
