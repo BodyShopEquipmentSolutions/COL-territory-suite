@@ -561,13 +561,14 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
     plan.push(...customResolved);
   }
 
-  // Bounded-concurrency line insert. LineNumberActual is assigned up-front
-  // by index so order is preserved even though requests overlap.
-  const CONCURRENCY = 8;
+  // Sequential line insert. QW rejects concurrent inserts to the same
+  // DocumentHeader with a 400 (row-lock/line-number contention). With bulk
+  // product lookups pre-warming the cache, the remaining loop is just 1 HTTP
+  // round-trip per line, which fits comfortably inside the 26s budget for
+  // realistic audit sizes (~90 lines at ~200ms each = ~18s).
   const numbered = plan.map((p, i) => ({ LineNumberActual: i + 1, ...p }));
-  for (let start = 0; start < numbered.length; start += CONCURRENCY) {
-    const batch = numbered.slice(start, start + CONCURRENCY);
-    await Promise.all(batch.map(row => createLine(base, apiKey, docId, row)));
+  for (const row of numbered) {
+    await createLine(base, apiKey, docId, row);
   }
 
   // Re-fetch header to pick up the DocNo (assigned server-side on create in
