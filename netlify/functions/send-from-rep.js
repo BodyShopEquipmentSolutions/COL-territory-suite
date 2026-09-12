@@ -345,7 +345,7 @@ async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride,
       bodyPreview: (email.body || '').slice(0, 120),
       subject: email.subject,
     },
-    sendResponse: sendResp,
+    // sendResponse intentionally omitted — SendEmail is fire-and-forget
     timings,
   };
 }

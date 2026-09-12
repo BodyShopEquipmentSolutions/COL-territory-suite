@@ -20,11 +20,38 @@ const QW_BASE_DEFAULT = 'https://qwwapi.quotewerks.com';
 // is Ryan-editable. Anything not in the map falls through to a shared inbox
 // with a subject line noting the intended rep.
 // ---------------------------------------------------------------------------
-const REP_EMAIL_MAP = {
-  'ryan.harthcock': 'bodyshop.e.s@gmail.com',
-  // TODO(ryan): fill in the rest. Missing entries fall back to FALLBACK_EMAIL.
-};
+// Live rep email lookup — pulls from QW's UserSettings table on every request
+// (row where KeyName='EmailAddress' and UserName matches the rep username).
+// This replaces the old hardcoded REP_EMAIL_MAP so the app never falls out of
+// sync with QW after adding/removing reps or changing addresses.
 const FALLBACK_EMAIL = 'bodyshop.e.s@gmail.com';
+
+async function resolveRepEmail(base, apiKey, repUsername) {
+  if (!repUsername) return { email: FALLBACK_EMAIL, source: 'fallback:no-rep' };
+  try {
+    const body = {
+      filter: [
+        { name: 'UserName', op: 'eq', val: repUsername },
+        { or: [
+          { name: 'KeyName', op: 'eq', val: 'EmailAddress' },
+          { name: 'KeyName', op: 'eq', val: 'EMailAddress' },
+          { name: 'KeyName', op: 'eq', val: 'Email' },
+        ]},
+      ],
+      page: { size: 5 },
+      fields: { UserSettings: ['UserName','KeyName','KeyValue'] },
+    };
+    const data = await qwFetch(base, apiKey, '/api/v1/qw/tables/UserSettings/search', { method: 'POST', body });
+    const rows = Array.isArray(data && data.data) ? data.data : [];
+    for (const r of rows) {
+      const v = (r.attributes && r.attributes.KeyValue) || '';
+      if (v && v.includes('@')) return { email: v.trim(), source: 'qw:UserSettings' };
+    }
+    return { email: FALLBACK_EMAIL, source: 'fallback:no-email-in-qw' };
+  } catch (e) {
+    return { email: FALLBACK_EMAIL, source: 'fallback:qw-error', error: (e && e.message) || String(e) };
+  }
+}
 
 function prettyRep(username) {
   if (!username) return '';
@@ -439,9 +466,10 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
 //   2) SMTP fallback: notify-only text email through noreply.colsw@gmail.com.
 //      No PDF attachment; used only when the QW send path errors.
 // ---------------------------------------------------------------------------
-async function emailRep({ rep, customer, docNo, docId, quoteUrl, panels }) {
-  const mapped = REP_EMAIL_MAP[rep];
-  const to = mapped || FALLBACK_EMAIL;
+async function emailRep({ rep, customer, docNo, docId, quoteUrl, panels, base, apiKey }) {
+  const resolved = await resolveRepEmail(base, apiKey, rep);
+  const to = resolved.email;
+  const mapped = resolved.source === 'qw:UserSettings';
   let qwErr = null;
 
   // Path 1 — QW send. Preferred: delivers the actual PDF from QW itself.
@@ -474,6 +502,7 @@ async function emailRep({ rep, customer, docNo, docId, quoteUrl, panels }) {
           subject: body.subject,
           attachments: body.attachments,
           mapped: !!mapped,
+          emailSource: resolved.source,
         };
       }
       qwErr = body.error || `http ${resp.status}`;
@@ -584,7 +613,7 @@ export const handler = async (event) => {
       const quoteUrl = `https://na.quotewerks.com/#/documents/${docId}`;
       let mail = { sent: false };
       try {
-        mail = await emailRep({ rep, customer, docNo, docId, quoteUrl, panels });
+        mail = await emailRep({ rep, customer, docNo, docId, quoteUrl, panels, base, apiKey: QW_API_KEY });
       } catch (mailErr) {
         // Don't fail the whole call if email dies — the quote exists.
         mail = { sent: false, error: mailErr.message };
@@ -594,6 +623,26 @@ export const handler = async (event) => {
         headers: cors,
         body: JSON.stringify({ ok: true, docId, docNo, quoteUrl, mail, diag }),
       };
+    }
+
+    if (action === 'recent_quotes') {
+      // Diagnostic: list N most recent DocumentHeaders. Handy for debugging
+      // without needing a QW Web session.
+      const size = Math.min(Math.max(Number(payload.size) || 10, 1), 50);
+      const body = {
+        page: { number: 1, size },
+        sort: '-Created',
+        fields: { DocumentHeaders: ['DocNo','SoldToCompany','SoldToContact','SoldToCity','SoldToState','EnteredBy','SalesRep','Created','GrandTotal','DocType','DocStatus'] },
+      };
+      const data = await qwFetch(base, QW_API_KEY, '/api/v1/qw/tables/DocumentHeaders/search', { method: 'POST', body });
+      const rows = (data && data.data) || [];
+      const results = rows.map(r => ({ id: r.id, ...r.attributes }));
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true, results }) };
+    }
+
+    if (action === 'resolve_rep_email') {
+      const info = await resolveRepEmail(base, QW_API_KEY, payload.rep || '');
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true, ...info }) };
     }
 
     return {
