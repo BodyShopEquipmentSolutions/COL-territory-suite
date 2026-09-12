@@ -76,22 +76,38 @@ async function qwFetch(base, apiKey, path, opts = {}) {
   if (opts.body != null && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
   }
-  const res = await fetch(url, {
-    method: opts.method || 'GET',
-    headers,
-    body: opts.body != null ? (typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body)) : undefined,
-  });
-  const text = await res.text();
-  let data = null;
-  try { data = text ? JSON.parse(text) : null; } catch { /* leave data null */ }
-  if (!res.ok) {
-    const snippet = text ? text.slice(0, 400) : '';
-    const err = new Error(`QW ${opts.method || 'GET'} ${path} -> ${res.status}${snippet ? ': ' + snippet : ''}`);
-    err.status = res.status;
-    err.body = data;
-    throw err;
+  // Retry on 429 (QW rate limit is 200 req/60s). We only ever get here from
+  // parallelized loops — backoff + jitter unblocks us without failing the quote.
+  const MAX_ATTEMPTS = 4;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const res = await fetch(url, {
+      method: opts.method || 'GET',
+      headers,
+      body: opts.body != null ? (typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body)) : undefined,
+    });
+    const text = await res.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch { /* leave data null */ }
+    if (res.status === 429 && attempt < MAX_ATTEMPTS) {
+      // Respect Retry-After header if present, else exponential backoff with jitter.
+      const ra = Number(res.headers.get('retry-after'));
+      const waitMs = Number.isFinite(ra) && ra > 0
+        ? Math.min(ra * 1000, 8000)
+        : Math.min(500 * Math.pow(2, attempt - 1), 4000) + Math.floor(Math.random() * 250);
+      await new Promise(r => setTimeout(r, waitMs));
+      continue;
+    }
+    if (!res.ok) {
+      const snippet = text ? text.slice(0, 400) : '';
+      const err = new Error(`QW ${opts.method || 'GET'} ${path} -> ${res.status}${snippet ? ': ' + snippet : ''}`);
+      err.status = res.status;
+      err.body = data;
+      throw err;
+    }
+    return data;
   }
-  return data;
+  // unreachable
+  throw new Error(`QW ${opts.method || 'GET'} ${path} -> exhausted retries`);
 }
 
 // ---------------------------------------------------------------------------
