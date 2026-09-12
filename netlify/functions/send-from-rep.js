@@ -245,6 +245,18 @@ async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride 
     from: email.from,
     subject: email.subject,
     attachments: (email.attachments || []).map((a) => a.name),
+    // Diagnostic snapshot: fields the composer actually returned so we can
+    // tell whether it built the PDF and populated body/attachments.
+    composerDiag: {
+      hasAttachments: Array.isArray(email.attachments) ? email.attachments.length : null,
+      attachmentKeys: Array.isArray(email.attachments) && email.attachments[0] ? Object.keys(email.attachments[0]).sort() : null,
+      bodyLen: (email.body || '').length,
+      bodyPreview: (email.body || '').slice(0, 120),
+      isHtml: email.isHtml,
+      subject: email.subject,
+      from: email.from,
+      emailKeys: Object.keys(email).sort(),
+    },
     sendResponse: sendResp,
     timings,
   };
