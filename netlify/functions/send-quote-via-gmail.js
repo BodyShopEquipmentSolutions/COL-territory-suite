@@ -217,9 +217,9 @@ export const handler = async (event) => {
       ? Number(header.TotalPrice).toLocaleString('en-US', { style: 'currency', currency: 'USD' })
       : '';
 
-    const subject = composerEmail?.subject?.trim()
-      ? composerEmail.subject.trim()
-      : `Quote ${docNo}${soldToCompany ? ' \u2014 ' + soldToCompany : ''}`;
+    // QW composer subject is literally "<#AAAQ1069>" — that's a template placeholder,
+    // not a real subject. Always synthesize a clean subject line.
+    const subject = `Quote ${docNo}${soldToCompany ? ' — ' + soldToCompany : ''}`;
     const bodyHtml = composerEmail?.body
       ? composerEmail.body
       : `<p>Quote ${docNo} is attached${soldToCompany ? ' for ' + soldToCompany : ''}${total ? ' (' + total + ')' : ''}.</p>`;

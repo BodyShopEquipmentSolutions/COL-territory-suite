@@ -667,15 +667,13 @@ async function emailRep({ rep, docId, base, apiKey }) {
   // send-from-rep is a BACKGROUND function (file ends in -background.js). Netlify's
   // edge/CDN has a hard 30s inactivity timeout on every HTTPS request, INCLUDING
   // function-to-function calls within the same site. A synchronous invocation of
-  // send-from-rep therefore 504's whenever QW SendEmail takes >~28s, and the
-  // caller never learns the real result. Background functions bypass the edge
-  // cap: the invocation call itself returns 202 in a few hundred ms and the
-  // real work runs asynchronously for up to 15 min. The audit UI's success
-  // screen already says "the quote is in QuoteWerks" — email delivery status
-  // has to be polled or reported separately, which is worth the trade for
-  // reliable send on any quote size.
+  // We bypass QW's SendEmail entirely: log into QW, generate the same PDF the
+  // Preview button produces (qwPrintMethod: 1), download the bytes via
+  // PrintPreviewPdf?id=<uuid>, and send from bodyshop.e.s@gmail.com over Gmail
+  // SMTP directly to the rep. This completes in ~8s and returns a real
+  // messageId instead of the QW SendEmail 30s+ hang.
   try {
-    const resp = await fetch(`${siteUrl}/.netlify/functions/send-from-rep-background`, {
+    const resp = await fetch(`${siteUrl}/.netlify/functions/send-quote-via-gmail`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -683,26 +681,30 @@ async function emailRep({ rep, docId, base, apiKey }) {
         repUsername: rep,
         repEmail: to,
       }),
-      // Background function invocation should ack in well under 5s. If Netlify
-      // itself is slow, treat as a queue failure and surface it to the caller.
-      signal: AbortSignal.timeout(10000),
+      // Full round-trip is normally ~9s; give it room without approaching the
+      // 26s Netlify edge cap so we can still return a clean error.
+      signal: AbortSignal.timeout(25000),
     });
-    if (resp.status === 202) {
+    const body = await resp.json().catch(() => ({}));
+    if (resp.status === 200 && body?.ok) {
       return {
-        queued: true,
-        sent: false,
+        queued: false,
+        sent: true,
         to,
-        via: 'qw-background',
+        via: 'gmail-smtp',
+        messageId: body.messageId,
+        subject: body.subject,
+        pdfBytes: body.pdfBytes,
         mapped: !!mapped,
         emailSource: resolved.source,
       };
     }
-    const body = await resp.json().catch(() => ({}));
     return {
       queued: false,
       sent: false,
       to,
-      error: body.error || `unexpected ack http ${resp.status}`,
+      via: 'gmail-smtp',
+      error: body.error || `send failed http ${resp.status}`,
       mapped: !!mapped,
       emailSource: resolved.source,
     };
@@ -711,6 +713,7 @@ async function emailRep({ rep, docId, base, apiKey }) {
       queued: false,
       sent: false,
       to,
+      via: 'gmail-smtp',
       error: e?.message || String(e),
       mapped: !!mapped,
       emailSource: resolved.source,
