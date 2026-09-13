@@ -46,25 +46,35 @@ export const handler = async (event) => {
     const idxResp = await fetch(`https://${QW_HOST}/r26b3b/`, { headers:{ cookie } });
     const idx = await idxResp.text();
     const scriptSrcs = Array.from(idx.matchAll(/src="([^"]+\.js[^"]*)"/g)).map(m=>m[1]);
-    // Also grab a couple of likely index locations
+    // Only look at QW's own JS (skip CDNs like jquery, angular, ckeditor, etc.)
+    const isOurs = (s) => (s.startsWith('/') || s.startsWith('r26b3b') || (!s.startsWith('http'))) && !s.includes('vendor/');
     const bundles = [];
+    const allMatches = new Set();
     for (const s of scriptSrcs) {
+      if (!isOurs(s)) continue;
       const url = s.startsWith('http') ? s : (s.startsWith('/') ? `https://${QW_HOST}${s}` : `https://${QW_HOST}/r26b3b/${s}`);
       try {
         const b = await fetch(url, { headers:{ cookie } });
         const txt = await b.text();
+        // Grep for api/... paths that mention attachment/pdf/download
+        const re = /['"`](api\/[\w/.\-]*(?:[Aa]ttachment|[Pp]df|PDF|[Dd]ownload|[Pp]rintPdf)[\w/.\-]*)['"`]/g;
+        let m; while ((m = re.exec(txt))) allMatches.add(m[1]);
+        // Also lines containing 'attachmentId' or 'printPdfId' as substrings
+        for (const kw of ['attachmentId','printPdfId','GetAttachment','DownloadAttachment','ViewAttachment','OpenAttachment','FetchAttachment','LoadAttachment']) {
+          if (txt.includes(kw)) {
+            // Grab a 120-char window
+            const idx = txt.indexOf(kw);
+            allMatches.add(`${kw}::${txt.slice(Math.max(0,idx-60), idx+80)}`);
+          }
+        }
         bundles.push({ url, len: txt.length });
-        // Grep the text for lines that look like attachment/pdf-download URLs
-        const re = /['"`]([\w/.\-]*(attachment|Attachment|Pdf|PDF|Download|download)[\w/.\-]*)['"`]/g;
-        const matches = new Set();
-        let m; while ((m = re.exec(txt))) matches.add(m[1]);
-        bundles[bundles.length-1].matches = Array.from(matches).slice(0,80);
       } catch (e) {
         bundles.push({ url, error: e.message });
       }
     }
     return { statusCode:200, headers:{...cors(),'content-type':'application/json'},
-             body: JSON.stringify({ ok:true, scriptCount: scriptSrcs.length, bundles }, null, 2) };
+             body: JSON.stringify({ ok:true, scriptCount: scriptSrcs.length, ourCount: bundles.length,
+                                    matches: Array.from(allMatches) }, null, 2) };
   } catch (e) {
     return { statusCode:500, headers:cors(), body: JSON.stringify({ error: String(e), stack: e.stack }) };
   }
