@@ -268,7 +268,7 @@ async function enrichCustomer(base, apiKey, customer, diag) {
   };
 }
 
-async function createHeader(base, apiKey, { rep, customer }) {
+async function createHeader(base, apiKey, { rep, customer, shippingAmount }) {
   // QW's REST API does NOT auto-populate SoldTo fields from a CRM link on POST.
   // Send every field the frontend has — and also stamp SoldToCMCompanyRecID
   // so the quote stays associated with the CRM record for future lookups.
@@ -280,6 +280,15 @@ async function createHeader(base, apiKey, { rep, customer }) {
     PreparedBy: rep,
     CreatedBy: rep,
   };
+  // Shipping/freight lives on the header (drives the Shipping box next to
+  // Sales Tax in the PDF layout) — NOT as a line item. Populate both
+  // primary and secondary-currency fields QW uses.
+  if (Number(shippingAmount) > 0) {
+    const amt = Number(shippingAmount);
+    attrs.ShippingAmount = amt;
+    attrs.AlternateShippingAmount = amt;
+    attrs.ShippingCost = amt;
+  }
   if (customer) {
     const company = customer.company || customer.customer;
     if (company)           attrs.SoldToCompany  = clip('SoldToCompany',  company);
@@ -368,7 +377,11 @@ async function createQuote(base, apiKey, { rep, customer, panels, addons }) {
       diag.enrichError = e?.message || String(e);
     }
   }
-  const header = await createHeader(base, apiKey, { rep, customer: fullCustomer });
+  const header = await createHeader(base, apiKey, {
+    rep,
+    customer: fullCustomer,
+    shippingAmount: Number(addons.freight) || 0,
+  });
   const docId = header.id;
 
   // Product lookup cache shared across the whole quote.
@@ -603,21 +616,10 @@ async function createQuote(base, apiKey, { rep, customer, panels, addons }) {
     }
   }
 
-  // 3) Shipping / Freight
-  const freight = Number(addons.freight) || 0;
-  if (freight > 0) {
-    plan.push({
-      LineType: 1,
-      Manufacturer: 'COL',
-      ManufacturerPartNumber: 'FREIGHT',
-      PartNumber: 'FREIGHT',
-      Description: 'Shipping / Freight',
-      QtyBase: 1,
-      UnitPrice: freight,
-      UnitCost: 0,
-      UnitList: freight,
-    });
-  }
+  // 3) Shipping / Freight — intentionally NOT added as a line item.
+  //    It's set on the DocumentHeaders row (ShippingAmount) so the layout's
+  //    Shipping box (right next to Sales Tax at the bottom of the quote) fills
+  //    itself. See createHeader() where shippingAmount is written to attrs.
 
   // NOTE: Sales tax is intentionally NOT added as a line item here.
   // QuoteWerks has native tax handling via LocalTax/LocalTaxRate/TotalTax on
