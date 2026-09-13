@@ -1,7 +1,10 @@
-console.log('[test-bg] MODULE LOAD at', new Date().toISOString());
 export const handler = async (event) => {
-  console.log('[test-bg] HANDLER CALLED', event?.httpMethod, (event?.body || '').length);
-  await new Promise(r => setTimeout(r, 2000));
-  console.log('[test-bg] HANDLER DONE');
+  const stamp = new Date().toISOString();
+  try {
+    await fetch('https://bodyshopequipment.solutions/.netlify/functions/proof-sink-v1?src=test-bg-v1', {
+      method: 'POST', headers: {'content-type':'text/plain'},
+      body: `test-background V1 API ran at ${stamp}`,
+    });
+  } catch(_) {}
   return { statusCode: 200, body: 'ok' };
 };
