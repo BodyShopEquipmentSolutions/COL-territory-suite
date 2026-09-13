@@ -858,13 +858,15 @@ export const handler = async (event) => {
       if (!docId) return { statusCode: 400, headers: cors, body: JSON.stringify({ ok:false, error:'docId required'}) };
       const data = await qwFetch(base, QW_API_KEY, `/api/v1/qw/tables/DocumentHeaders/${encodeURIComponent(docId)}`);
       const attrs = data && data.data && data.data.attributes || {};
-      const shipTo = {}, soldTo = {}, tax = {};
+      const shipTo = {}, soldTo = {}, tax = {}, freight = {}, totals = {};
       for (const [k,v] of Object.entries(attrs)) {
         if (k.startsWith('ShipTo')) shipTo[k] = v;
         else if (k.startsWith('SoldTo')) soldTo[k] = v;
         else if (/tax/i.test(k) || k === 'TaxZone' || k === 'TaxSystem') tax[k] = v;
+        else if (/ship|freight|carrier|track/i.test(k)) freight[k] = v;
+        else if (/total|grand|subtotal|discount|price/i.test(k)) totals[k] = v;
       }
-      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok:true, docNo: attrs.DocNo, shipTo, soldTo, tax }) };
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok:true, docNo: attrs.DocNo, shipTo, soldTo, tax, freight, totals }) };
     }
 
     log('unknown action:', action);
