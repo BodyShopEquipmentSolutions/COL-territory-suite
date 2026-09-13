@@ -63,67 +63,6 @@ function prettyRep(username) {
 }
 
 // ---------------------------------------------------------------------------
-// Sales tax lookup via TaxJar (https://developers.taxjar.com/).
-// Called from the audit UI's Look-up-rate button. Returns a *rate* only; the
-// caller computes the actual tax amount so we can tax the whole plan
-// (including add-ons that may not exist yet at lookup time).
-// ---------------------------------------------------------------------------
-async function lookupTaxRate(customer) {
-  const key = process.env.TAXJAR_API_KEY;
-  if (!key) {
-    return { ok: false, needsKey: true, error: 'TAXJAR_API_KEY is not configured on the server. Add it to Netlify environment variables to enable tax lookup.' };
-  }
-  const zip = String(customer.zip || '').trim();
-  const state = String(customer.state || '').trim();
-  const city = String(customer.city || '').trim();
-  const country = String(customer.country || 'US').trim() || 'US';
-  if (!zip) {
-    return { ok: false, error: 'Customer ZIP is required for tax lookup. Fill in the customer address first.' };
-  }
-  // TaxJar's /v2/rates/{zip} endpoint returns the combined rate for that ZIP
-  // with optional state/city/street refinement. That's the right endpoint for
-  // "give me the rate at this location"; /v2/taxes is for full-order tax
-  // calculation (which we do NOT want here because our add-ons aren't in the
-  // plan yet at lookup time).
-  const url = new URL(`https://api.taxjar.com/v2/rates/${encodeURIComponent(zip)}`);
-  if (state) url.searchParams.set('state', state);
-  if (city) url.searchParams.set('city', city);
-  if (country) url.searchParams.set('country', country);
-  let res, body;
-  try {
-    res = await fetch(url.toString(), {
-      method: 'GET',
-      headers: { 'Authorization': `Token token="${key}"`, 'Accept': 'application/json' },
-    });
-    body = await res.text();
-  } catch (e) {
-    return { ok: false, error: `TaxJar request failed: ${e.message}` };
-  }
-  let j;
-  try { j = body ? JSON.parse(body) : {}; } catch { j = null; }
-  if (!res.ok) {
-    const errMsg = (j && (j.error || j.detail)) || `TaxJar ${res.status}`;
-    return { ok: false, error: errMsg };
-  }
-  const rateObj = j && j.rate ? j.rate : null;
-  if (!rateObj) return { ok: false, error: 'TaxJar returned no rate.' };
-  // combined_rate is a decimal string like "0.0825" for 8.25%.
-  const combined = Number(rateObj.combined_rate);
-  if (!isFinite(combined) || combined < 0) return { ok: false, error: 'TaxJar returned invalid combined_rate.' };
-  return {
-    ok: true,
-    rate: combined,
-    source: `TaxJar ${rateObj.zip || zip}${rateObj.state ? `, ${rateObj.state}` : ''}`,
-    breakdown: {
-      state_rate: Number(rateObj.state_rate) || 0,
-      county_rate: Number(rateObj.county_rate) || 0,
-      city_rate: Number(rateObj.city_rate) || 0,
-      combined_district_rate: Number(rateObj.combined_district_rate) || 0,
-    },
-  };
-}
-
-// ---------------------------------------------------------------------------
 // Thin QW REST helper. Every call injects X-API-Key and JSON:API-ish envelope.
 // Throws on non-2xx with the response body appended for easier debugging.
 // ---------------------------------------------------------------------------
@@ -357,6 +296,20 @@ async function createHeader(base, apiKey, { rep, customer }) {
       attrs.SoldToContact = clip('SoldToContact', customer.contact || customer.attention);
     // SoldToEmail intentionally left blank — see enrichCustomer() note.
     if (customer.id) attrs.SoldToCMCompanyRecID = String(customer.id);
+    // Mirror SoldTo -> ShipTo so QW's native "Automatic Sales Tax Rates"
+    // lookup (which keys off ShipTo address) has something to work with.
+    // Reps can edit ShipTo in QW if the ship-to differs from sold-to.
+    if (company)           attrs.ShipToCompany  = clip('SoldToCompany',  company);
+    if (customer.city)     attrs.ShipToCity     = clip('SoldToCity',     customer.city);
+    if (customer.state)    attrs.ShipToState    = clip('SoldToState',    customer.state);
+    if (customer.phone)    attrs.ShipToPhone    = clip('SoldToPhone',    customer.phone);
+    if (customer.address)  attrs.ShipToAddress1 = clip('SoldToAddress1', customer.address);
+    if (customer.address2) attrs.ShipToAddress2 = clip('SoldToAddress2', customer.address2);
+    if (customer.zip)      attrs.ShipToPostalCode = clip('SoldToPostalCode', customer.zip);
+    if (customer.country)  attrs.ShipToCountry    = clip('SoldToCountry',    customer.country);
+    if (customer.contact || customer.attention)
+      attrs.ShipToContact = clip('SoldToContact', customer.contact || customer.attention);
+    if (customer.id) attrs.ShipToCMCompanyRecID = String(customer.id);
   }
   const body = { data: { type: 'DocumentHeaders', attributes: attrs } };
   const res = await qwFetch(base, apiKey, '/api/v1/qw/tables/DocumentHeaders', { method: 'POST', body });
@@ -598,36 +551,12 @@ async function createQuote(base, apiKey, { rep, customer, panels, addons }) {
     });
   }
 
-  // 4) Sales Tax — rate resolved client-side via lookup_tax action.
-  //    Computed against ALL taxable lines (everything above except itself).
-  //    Training/Installation labor is generally NOT taxable in TX, but tax
-  //    liability varies by state; conservatively we tax everything and the
-  //    rep can adjust in QW if the customer disputes. Better to over-quote
-  //    than under-quote and eat the difference.
-  const taxRate = Number(addons.taxRate) || 0;
-  if (addons.tax && taxRate > 0) {
-    const taxableSubtotal = plan
-      .filter(l => l.LineType === 1)
-      .reduce((s, l) => s + (Number(l.UnitPrice)||0) * (Number(l.QtyBase)||0), 0);
-    const taxAmount = Math.round(taxableSubtotal * taxRate * 100) / 100;
-    if (taxAmount > 0) {
-      diag.taxRate = taxRate;
-      diag.taxSource = addons.taxSource || '';
-      diag.taxBase = taxableSubtotal;
-      diag.taxAmount = taxAmount;
-      plan.push({
-        LineType: 1,
-        Manufacturer: 'COL',
-        ManufacturerPartNumber: 'TAX',
-        PartNumber: 'TAX',
-        Description: `Sales Tax (${(taxRate*100).toFixed(3)}%)`,
-        QtyBase: 1,
-        UnitPrice: taxAmount,
-        UnitCost: 0,
-        UnitList: taxAmount,
-      });
-    }
-  }
+  // NOTE: Sales tax is intentionally NOT added as a line item here.
+  // QuoteWerks has native tax handling via LocalTax/LocalTaxRate/TotalTax on
+  // DocumentHeaders and can auto-lookup by ShipTo address (Real-time Data
+  // module, already licensed). Reps click "Lookup Tax Rate" in QW after
+  // opening the quote, or QW can pull it automatically from the CRM. Rolling
+  // our own would create two sources of truth and conflict with QW's engine.
 
   // Sequential insert preserves LineNumberActual assignment order in QW.
   // The frontend collapses whole-assembly rollups so this loop stays small.
@@ -836,27 +765,6 @@ export const handler = async (event) => {
     if (action === 'resolve_rep_email') {
       const info = await resolveRepEmail(base, QW_API_KEY, payload.rep || '');
       return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true, ...info }) };
-    }
-
-    if (action === 'inspect_header') {
-      // Diagnostic: dump every attribute on a DocumentHeaders row so we can
-      // see which tax fields QW exposes.
-      const docId = payload.docId;
-      if (!docId) return { statusCode: 400, headers: cors, body: JSON.stringify({ ok:false, error:'docId required'}) };
-      const data = await qwFetch(base, QW_API_KEY, `/api/v1/qw/tables/DocumentHeaders/${encodeURIComponent(docId)}`);
-      const attrs = data && data.data && data.data.attributes || {};
-      // Just the tax-related fields
-      const taxFields = {};
-      for (const [k,v] of Object.entries(attrs)) {
-        if (/tax|zip4|shipto|verified/i.test(k)) taxFields[k] = v;
-      }
-      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok:true, allKeys: Object.keys(attrs).sort(), taxFields }) };
-    }
-
-    if (action === 'lookup_tax') {
-      const info = await lookupTaxRate(payload.customer || {});
-      const status = info.ok ? 200 : 400;
-      return { statusCode: status, headers: cors, body: JSON.stringify(info) };
     }
 
     log('unknown action:', action);

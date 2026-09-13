@@ -275,10 +275,8 @@ let state = {
     training: [],        // array of TRAINING_OPTIONS.sku
     installation: [],    // array of INSTALL_OPTIONS.sku
     freight: 0,          // dollar amount
-    tax: false,          // include tax line
-    taxRate: null,       // decimal (0.0825 = 8.25%), populated from address lookup
-    taxAmount: 0,        // resolved dollar amount
-    taxSource: '',       // 'taxjar' | 'manual' | ''
+    // Sales tax intentionally NOT here — QuoteWerks handles tax natively
+    // from the ship-to address via its built-in Real-time Data lookup.
   },
 };
 
@@ -1044,12 +1042,6 @@ function renderAddons(){
       <span class="addon-price">${fmtMoney(t.price)}</span>
     </label>`).join('');
 
-  const taxHint = a.tax
-    ? (a.taxRate != null
-        ? `Rate: ${(a.taxRate*100).toFixed(3)}% <span style="color:var(--muted)">(${escapeHtml(a.taxSource||'lookup')})</span>`
-        : `<span style="color:var(--warn)">Rate not yet resolved — click Look up</span>`)
-    : '';
-
   return `
     <div class="addons-card">
       <div class="addons-title">Optional add-ons</div>
@@ -1080,18 +1072,10 @@ function renderAddons(){
         </label>
       </div>
 
-      <div class="addon-section">
-        <div class="addon-section-title">Sales Tax</div>
-        <label class="addon-row">
-          <input type="checkbox" ${a.tax?'checked':''} onchange="toggleTax(this.checked)">
-          <span class="addon-label">Add sales tax (looked up from customer address)</span>
-        </label>
-        ${a.tax ? `
-          <div class="tax-lookup-row">
-            <div class="tax-hint">${taxHint}</div>
-            <button class="btn sec sm" onclick="lookupTax()" id="tax-lookup-btn">Look up rate</button>
-          </div>
-        ` : ''}
+      <div class="addon-section addon-note">
+        <div style="font-size:12px;color:var(--muted);line-height:1.4">
+          <strong>Sales tax:</strong> QuoteWerks computes tax automatically from the customer's ship-to address after the quote is created. Click “Lookup Tax Rate” in QW if it doesn't appear.
+        </div>
       </div>
     </div>`;
 }
@@ -1117,47 +1101,12 @@ function setFreight(v){
   state.addons.freight = isFinite(n) && n > 0 ? n : 0;
   // Don't rerender — preserves input focus
 }
-function toggleTax(v){
-  state.addons.tax = !!v;
-  if (!v) { state.addons.taxRate = null; state.addons.taxAmount = 0; state.addons.taxSource = ''; }
-  rerenderAddons();
-}
-async function lookupTax(){
-  const btn = $('#tax-lookup-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Looking up…'; }
-  try {
-    const c = state.customer || {};
-    const res = await fetch('/.netlify/functions/create-qw-quote', {
-      method: 'POST',
-      headers: {'content-type':'application/json'},
-      body: JSON.stringify({
-        action: 'lookup_tax',
-        customer: { address: c.address, city: c.city, state: c.state, zip: c.zip, country: c.country || 'US' },
-      }),
-    });
-    const j = await res.json();
-    if (!j.ok) throw new Error(j.error || 'Tax lookup failed');
-    state.addons.taxRate = Number(j.rate) || 0;
-    state.addons.taxSource = j.source || 'lookup';
-  } catch(e){
-    alert('Tax lookup failed: ' + e.message + '\n\nYou can proceed without tax, or fix the customer address and try again.');
-    state.addons.taxRate = null;
-  } finally {
-    rerenderAddons();
-  }
-}
+
 function closeReview(){ $('#review-dlg').close(); }
 async function confirmCreateQuote(){
   const btn = $('#review-confirm');
   const err = $('#review-error');
   err.style.display = 'none';
-  // If user asked for tax but never resolved a rate, block — easier than
-  // silently sending a $0 tax line and having them wonder later.
-  if (state.addons.tax && (state.addons.taxRate == null || state.addons.taxRate === 0)) {
-    err.textContent = 'Tax is enabled but no rate resolved. Click "Look up rate" or turn off Sales Tax.';
-    err.style.display = 'block';
-    return;
-  }
   btn.disabled = true;
   btn.textContent = 'Creating quote…';
   // Rolling status — tell the user roughly what's happening. Server-side we
@@ -1223,9 +1172,6 @@ async function confirmCreateQuote(){
     training: (state.addons.training || []).map(sku => trainingCat.get(sku)).filter(Boolean),
     installation: (state.addons.installation || []).map(sku => installCat.get(sku)).filter(Boolean),
     freight: Number(state.addons.freight) || 0,
-    tax: !!state.addons.tax,
-    taxRate: state.addons.tax ? (Number(state.addons.taxRate) || 0) : 0,
-    taxSource: state.addons.taxSource || '',
   };
 
   // Client timeout — the server now creates the QW quote synchronously (fast)
@@ -1298,7 +1244,7 @@ function startAnother(){
   state = {
     step: 'customer', rep: keepRep, customer: null,
     bundles: {}, panels: [], activePanel: 0, result: null,
-    addons: { logistics: false, training: [], installation: [], freight: 0, tax: false, taxRate: null, taxAmount: 0, taxSource: '' },
+    addons: { logistics: false, training: [], installation: [], freight: 0 },
   };
   render();
 }
