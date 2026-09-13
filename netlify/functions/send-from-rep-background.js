@@ -233,6 +233,13 @@ export async function probeAttachmentDownload({ docRecGuid, repUsername, attachm
     coverPageMessage:'', qwPrintMethod: 5, createPOforEachVendor: null, makePDFReadOnly: null,
   });
   const printPdfId = pdfResp2?.pdfList?.[0]?.printPdfId;
+  // Also try Print action (qwPrintMethod: 4 = Print/Preview, 5 = SaveAsPdf, 3 = Preview?)
+  const previewResp = await qwPost(jar, releasePath, 'api/DocumentDeliver/GeneratePrintPdf', {
+    coverPageMessage:'', qwPrintMethod: 4, createPOforEachVendor: null, makePDFReadOnly: null,
+  }).catch(e => ({ error: String(e) }));
+  const previewResp3 = await qwPost(jar, releasePath, 'api/DocumentDeliver/GeneratePrintPdf', {
+    coverPageMessage:'', qwPrintMethod: 3, createPOforEachVendor: null, makePDFReadOnly: null,
+  }).catch(e => ({ error: String(e) }));
   const aiiResp = await getAii(jar, releasePath).catch(()=>null);
 
   const candidates = [
@@ -288,7 +295,7 @@ export async function probeAttachmentDownload({ docRecGuid, repUsername, attachm
       results.push({ url: c.url, method: c.m, error: e.message });
     }
   }
-  return { attId, printPdfId, aiiResp, hit: null, tried: results };
+  return { attId, printPdfId, pdfResp2, previewResp, previewResp3, aiiResp, hit: null, tried: results };
 }
 
 // Diagnostic: run through login → deliver → SetLayout → GeneratePrintPdf →
