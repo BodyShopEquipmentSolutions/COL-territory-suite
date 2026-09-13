@@ -784,8 +784,26 @@ function renderAuditNode(node, panel, depth){
         <button class="status-btn ${roll==='order'?'on-order':''}" onclick="setAssemblyStatus('${escapeHtml(node.path)}','order')">Order (whole assembly)</button>
         <button class="status-btn ${roll==='mixed'?'on-order':''}" onclick="setAssemblyStatus('${escapeHtml(node.path)}','pick-order')">Order (pick sub-parts)</button>
       </div>
+      ${roll === 'order' ? `<div class="followup" style="padding-left:22px;margin-top:-2px"><div class="stepper"><button onclick="stepAssemblyQty('${escapeHtml(node.path)}',-1)">−</button><span class="qty">× ${assemblyQty(node)}</span><button onclick="stepAssemblyQty('${escapeHtml(node.path)}',1)">+</button></div><span style="color:var(--muted);font-size:12px">assemblies to order</span></div>` : ''}
       <div class="audit-children" ${open ? '' : 'hidden'}>${(node.children || []).map(child => renderAuditNode(child, panel, depth + 1)).join('')}</div>
     </div>`;
+}
+// Whole-assembly qty: stored on every leaf under the node (they share it since
+// setAssemblyStatus('order') sets each leaf's qty together). Read from the
+// first leaf as the canonical value.
+function assemblyQty(node){
+  const leaves = collectAuditLeaves([node]);
+  if (!leaves.length) return 1;
+  return Math.max(1, +leaves[0].qty || 1);
+}
+function stepAssemblyQty(path, delta){
+  const panel = state.panels[state.activePanel];
+  const node = findNodeByPath(panel.tree || [], path);
+  if (!node) return;
+  const cur = assemblyQty(node);
+  const next = Math.max(1, cur + delta);
+  collectAuditLeaves([node]).forEach(l => { if (l.wholeAssembly) l.qty = next; });
+  render();
 }
 function findNodeByPath(nodes, path){
   for (const n of nodes){
@@ -821,7 +839,9 @@ function setAssemblyStatus(path, status){
 }
 function renderAuditItem(it, idx, depth=0){
   const notesOpen = !!it.note || it._noteOpen;
-  const needsQty = it.status === 'order';
+  // Qty stepper is ALWAYS available now - a rep may need to bump qty on a
+  // 'present' item that they still want to order more of, or trim a preset qty.
+  const needsQty = true;
   const needed = it.qtyNeeded && it.qtyNeeded !== 1 ? `<div class="required-qty">Qty needed: ${escapeHtml(it.qtyNeeded)}</div>` : '';
   const photo = photoFor(it.partNumber, it.img);
   const hasCustom = !!(it.partNumber && PART_PHOTOS[it.partNumber]);
