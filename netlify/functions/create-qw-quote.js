@@ -838,17 +838,13 @@ export const handler = async (event) => {
     if (action === 'inspect_lines') {
       const docId = payload.docId;
       if (!docId) return { statusCode: 400, headers: cors, body: JSON.stringify({ ok:false, error:'docId required'}) };
-      const body = {
-        filter: [{ name: 'DocRecGUID', op: 'eq', val: docId }],
-        pagination: { current_page: 1, per_page: 200 },
-        order_by: [{ name: 'LineNumberActual', asc: true }],
-      };
-      const data = await qwFetch(base, QW_API_KEY, '/api/v1/qw/tables/DocumentItems/search', { method: 'POST', body });
+      const body = { filter: [{ name: 'DocRecGUID', op: 'eq', val: docId }] };
+      const data = await qwFetch(base, QW_API_KEY, '/api/v1/qw/tables/DocumentItems/search?page[size]=200', { method: 'POST', body });
       const rows = (data && data.data) || [];
       const lines = rows.map(r => {
         const a = r.attributes || {};
         return { n: a.LineNumberActual, type: a.LineType, pn: a.PartNumber, desc: a.Description, qty: a.QtyBase, price: a.UnitPrice };
-      });
+      }).sort((x,y) => (x.n||0) - (y.n||0));
       return { statusCode: 200, headers: cors, body: JSON.stringify({ ok:true, count: lines.length, lines }) };
     }
 
