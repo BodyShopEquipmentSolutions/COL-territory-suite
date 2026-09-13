@@ -848,9 +848,12 @@ export const handler = async (event) => {
       const rows = (data && data.data) || [];
       const lines = rows.map(r => {
         const a = r.attributes || {};
-        return { n: a.LineNumberActual, type: a.LineType, pn: a.PartNumber, desc: a.Description, qty: a.QtyBase, price: a.UnitPrice };
+        return { n: a.LineNumberActual, type: a.LineType, pn: a.PartNumber, desc: a.Description, qty: a.QtyBase, price: a.UnitPrice, RichText: a.RichText, ItemAttributes: a.ItemAttributes };
       }).sort((x,y) => (x.n||0) - (y.n||0));
-      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok:true, count: lines.length, lines }) };
+      // If caller passes ?raw=1, dump the FULL first row's attributes so we
+      // can see what QW is actually storing per line.
+      const dumpRaw = payload.raw ? (rows[0]?.attributes || {}) : null;
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok:true, count: lines.length, lines, raw: dumpRaw }) };
     }
 
     if (action === 'inspect_header') {
