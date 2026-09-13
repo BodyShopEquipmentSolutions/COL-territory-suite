@@ -1,6 +1,4 @@
 // Diagnostic: log into QW, generate preview PDF for a doc, return the PDF bytes.
-import * as cookie from 'cookie';
-
 const QW_HOST = process.env.QW_HOST || 'na.quotewerks.com';
 const QW_RELEASE = process.env.QW_RELEASE_PATH || '/r26b3b/';
 const QW_TENANT = process.env.QW_TENANT || 'caroliner002';
