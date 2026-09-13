@@ -163,7 +163,7 @@ async function discoverReleasePath(jar) {
   throw new Error(`release path ${QW_RELEASE_PATH_DEFAULT} returned ${probe.status}; set QW_RELEASE_PATH env var to current /rXXX/`);
 }
 
-async function qwPost(jar, releasePath, apiPath, payload) {
+async function qwPost(jar, releasePath, apiPath, payload, fetchTimeoutMs = 60000) {
   const url = `https://${QW_HOST}${releasePath}${apiPath}`;
   const resp = await fetch(url, {
     method: 'POST',
@@ -175,6 +175,7 @@ async function qwPost(jar, releasePath, apiPath, payload) {
       referer: `https://${QW_HOST}${releasePath}`,
     },
     body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(fetchTimeoutMs),
   });
   const raw = await extractSetCookie(resp);
   raw.forEach((c) => jar.ingest(c));
@@ -316,15 +317,17 @@ async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride,
     email.fromDisplayName = fromDisplayName.trim();
   }
 
-  // SendEmail bundles PDF + hands off to Google SMTP inside QW's process,
-  // regularly needs 15-30s. Function-level timeout is 60s (per-function in
-  // netlify.toml, Netlify sync max). Give SendEmail 52s of headroom so login
-  // + release-probe + layout + generate + composer can still fit under 60s.
+  // SendEmail bundles PDF + hands off to Google SMTP inside QW's process.
+  // For large multi-panel quotes (9+ items with pricing rollups) QW SendEmail
+  // can easily exceed 60s. We're in a background function (15-min ceiling),
+  // so give SendEmail a generous 300s and pass the timeout down to the actual
+  // fetch so aborts cancel the underlying socket instead of orphaning it.
+  const SEND_TIMEOUT_MS = 300000;
   const sendResp = await step('SendEmail', () => qwPost(jar, releasePath, 'api/Email/SendEmail', {
     email,
     emailContext: 'EmailQuote',
     docRecGuid,
-  }), 52000);
+  }, SEND_TIMEOUT_MS), SEND_TIMEOUT_MS);
 
   return {
     ok: true,
