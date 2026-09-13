@@ -25,6 +25,22 @@
 
 console.log('[sfr] MODULE LOAD send-from-rep-background.js', new Date().toISOString());
 
+// Background function console.log is not captured on this Netlify site.
+// beacon() posts to proof-sink-v1 (a sync function whose logs ARE captured)
+// so we can trace execution and errors.
+async function beacon(reqId, msg) {
+  const siteUrl = process.env.URL || 'https://bodyshopequipment.solutions';
+  try {
+    await fetch(`${siteUrl}/.netlify/functions/proof-sink-v1?src=sfr&reqId=${reqId}`, {
+      method: 'POST',
+      headers: { 'content-type': 'text/plain' },
+      body: `[sfr ${reqId}] ${msg}`,
+    });
+  } catch (_) {
+    // best-effort
+  }
+}
+
 const QW_HOST = process.env.QW_HOST || 'na.quotewerks.com';
 const QW_TENANT = process.env.QW_TENANT || 'caroliner002';
 // QW rotates the /rXXX/ path on their server upgrades. Default is the current one
