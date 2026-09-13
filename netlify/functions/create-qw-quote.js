@@ -384,6 +384,9 @@ async function createQuote(base, apiKey, { rep, customer, panels, addons }) {
   //   5) Shipping / Freight (single line)
   //   6) Sales Tax (single line, rate resolved from customer address)
   const plan = [];
+  // Track where panel item lines end so we can compute the equipment subtotal
+  // for the discount BEFORE logistics/training/installation/freight/tax.
+  let equipmentEndIdx = 0;
   for (const panel of panels) {
     // panels[].order is the new field. Fall back to .missing + .damaged for
     // any old payloads still in flight.
@@ -395,6 +398,28 @@ async function createQuote(base, apiKey, { rep, customer, panels, addons }) {
         );
     const custom = Array.isArray(panel.custom) ? panel.custom : [];
     if (!orderItems.length && !custom.length) continue;
+
+    // Per-bundle section header so the printed quote clearly groups items
+    // under "BenchRack 5500", "CTR9", etc. Include unit# only when the caller
+    // is quoting more than one of the same bundle.
+    const bundleName = (panel.bundle_name || '').trim();
+    if (bundleName) {
+      const sameNameCount = panels.filter(p => (p.bundle_name || '').trim() === bundleName).length;
+      const headerText = sameNameCount > 1 && panel.unit_number
+        ? `${bundleName} (Unit ${panel.unit_number})`
+        : bundleName;
+      plan.push({
+        LineType: 2, // Comment line — QW renders as a visual divider / section header
+        Manufacturer: '',
+        ManufacturerPartNumber: '',
+        PartNumber: '',
+        Description: headerText,
+        QtyBase: 0,
+        UnitPrice: 0,
+        UnitCost: 0,
+        UnitList: 0,
+      });
+    }
 
     // BOM leaves identify their sellable parent through parentPartNumber.
     // Consolidate every flagged leaf beneath one parent SKU.
@@ -456,6 +481,49 @@ async function createQuote(base, apiKey, { rep, customer, panels, addons }) {
         UnitPrice: prod?.price || 0,
         UnitCost:  prod?.cost  || 0,
         UnitList:  prod?.list  || prod?.price || 0,
+      });
+    }
+  }
+  equipmentEndIdx = plan.length;
+
+  // ---- Discount (applied to equipment subtotal, BEFORE logistics/training/
+  //      installation/freight/tax) ----
+  // addons.discount = { type: 'percent' | 'flat', value: number }
+  // Percent is expressed as e.g. 5 for 5%, not 0.05.
+  const discount = addons && addons.discount;
+  if (discount && Number(discount.value) > 0) {
+    // Sum only the equipment lines emitted so far — LineType 1 items, excluding
+    // the section-header comment lines we just inserted.
+    const equipmentSubtotal = plan
+      .slice(0, equipmentEndIdx)
+      .filter(l => l.LineType === 1)
+      .reduce((s, l) => s + (Number(l.UnitPrice)||0) * (Number(l.QtyBase)||0), 0);
+    let discountAmount = 0;
+    let label = '';
+    if (discount.type === 'percent') {
+      const pct = Number(discount.value) || 0;
+      discountAmount = Math.round(equipmentSubtotal * (pct/100) * 100) / 100;
+      label = `Discount (${pct}% of equipment subtotal)`;
+    } else {
+      discountAmount = Math.round((Number(discount.value) || 0) * 100) / 100;
+      // Cap flat discount at equipment subtotal so we never go negative.
+      if (discountAmount > equipmentSubtotal) discountAmount = equipmentSubtotal;
+      label = 'Discount';
+    }
+    if (discountAmount > 0) {
+      diag.discountBase = equipmentSubtotal;
+      diag.discountAmount = discountAmount;
+      plan.push({
+        LineType: 1,
+        Manufacturer: 'COL',
+        ManufacturerPartNumber: 'DISCOUNT',
+        PartNumber: 'DISCOUNT',
+        Description: label,
+        QtyBase: 1,
+        // Negative unit price so it subtracts from the quote total in QW.
+        UnitPrice: -discountAmount,
+        UnitCost: 0,
+        UnitList: -discountAmount,
       });
     }
   }

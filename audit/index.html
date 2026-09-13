@@ -275,6 +275,7 @@ let state = {
     training: [],        // array of TRAINING_OPTIONS.sku
     installation: [],    // array of INSTALL_OPTIONS.sku
     freight: 0,          // dollar amount
+    discount: { type: 'percent', value: 0 }, // discount applied to equipment subtotal ONLY
     // Sales tax intentionally NOT here — QuoteWerks handles tax natively
     // from the ship-to address via its built-in Real-time Data lookup.
   },
@@ -1064,6 +1065,20 @@ function renderAddons(){
       </div>
 
       <div class="addon-section">
+        <div class="addon-section-title">Discount <span style="color:var(--muted);font-weight:400;font-size:12px">(applied to equipment subtotal only — before logistics, training, install, freight, and tax)</span></div>
+        <label class="addon-row addon-row-input" style="gap:8px">
+          <select onchange="setDiscountType(this.value)" class="addon-input" style="max-width:110px;flex:0 0 auto">
+            <option value="percent" ${a.discount?.type !== 'flat' ? 'selected':''}>Percent (%)</option>
+            <option value="flat" ${a.discount?.type === 'flat' ? 'selected':''}>Flat ($)</option>
+          </select>
+          <input type="number" min="0" step="0.01"
+                 value="${a.discount?.value ? a.discount.value : ''}"
+                 placeholder="${a.discount?.type === 'flat' ? '0.00' : '0'}"
+                 oninput="setDiscountValue(this.value)" class="addon-input">
+        </label>
+      </div>
+
+      <div class="addon-section">
         <div class="addon-section-title">Shipping / Freight</div>
         <label class="addon-row addon-row-input">
           <span class="addon-label">Freight charge ($)</span>
@@ -1099,6 +1114,17 @@ function toggleInstall(sku, v){
 function setFreight(v){
   const n = Number(v);
   state.addons.freight = isFinite(n) && n > 0 ? n : 0;
+  // Don't rerender — preserves input focus
+}
+function setDiscountType(t){
+  if (!state.addons.discount) state.addons.discount = { type: 'percent', value: 0 };
+  state.addons.discount.type = (t === 'flat') ? 'flat' : 'percent';
+  rerenderAddons();
+}
+function setDiscountValue(v){
+  if (!state.addons.discount) state.addons.discount = { type: 'percent', value: 0 };
+  const n = Number(v);
+  state.addons.discount.value = isFinite(n) && n > 0 ? n : 0;
   // Don't rerender — preserves input focus
 }
 
@@ -1172,6 +1198,10 @@ async function confirmCreateQuote(){
     training: (state.addons.training || []).map(sku => trainingCat.get(sku)).filter(Boolean),
     installation: (state.addons.installation || []).map(sku => installCat.get(sku)).filter(Boolean),
     freight: Number(state.addons.freight) || 0,
+    discount: (state.addons.discount && Number(state.addons.discount.value) > 0)
+      ? { type: (state.addons.discount.type === 'flat' ? 'flat' : 'percent'),
+          value: Number(state.addons.discount.value) }
+      : null,
   };
 
   // Client timeout — the server now creates the QW quote synchronously (fast)
@@ -1244,7 +1274,7 @@ function startAnother(){
   state = {
     step: 'customer', rep: keepRep, customer: null,
     bundles: {}, panels: [], activePanel: 0, result: null,
-    addons: { logistics: false, training: [], installation: [], freight: 0 },
+    addons: { logistics: false, training: [], installation: [], freight: 0, discount: { type: 'percent', value: 0 } },
   };
   render();
 }
