@@ -278,6 +278,10 @@ export async function probeAttachmentDownload({ docRecGuid, repUsername, attachm
       const head5 = Array.from(bytes.slice(0, 5)).map(b => String.fromCharCode(b)).join('');
       const isPdf = head5 === '%PDF-';
       const info = { url: c.url, method: c.m, status: resp.status, ct, cl, len: bytes.length, head5, isPdf };
+      // For non-PDF small responses, capture the body so we can debug
+      if (!isPdf && bytes.length < 5000) {
+        info.body = new TextDecoder().decode(bytes);
+      }
       results.push(info);
       if (isPdf) return { attId, hit: info };
     } catch (e) {
