@@ -63,6 +63,67 @@ function prettyRep(username) {
 }
 
 // ---------------------------------------------------------------------------
+// Sales tax lookup via TaxJar (https://developers.taxjar.com/).
+// Called from the audit UI's Look-up-rate button. Returns a *rate* only; the
+// caller computes the actual tax amount so we can tax the whole plan
+// (including add-ons that may not exist yet at lookup time).
+// ---------------------------------------------------------------------------
+async function lookupTaxRate(customer) {
+  const key = process.env.TAXJAR_API_KEY;
+  if (!key) {
+    return { ok: false, needsKey: true, error: 'TAXJAR_API_KEY is not configured on the server. Add it to Netlify environment variables to enable tax lookup.' };
+  }
+  const zip = String(customer.zip || '').trim();
+  const state = String(customer.state || '').trim();
+  const city = String(customer.city || '').trim();
+  const country = String(customer.country || 'US').trim() || 'US';
+  if (!zip) {
+    return { ok: false, error: 'Customer ZIP is required for tax lookup. Fill in the customer address first.' };
+  }
+  // TaxJar's /v2/rates/{zip} endpoint returns the combined rate for that ZIP
+  // with optional state/city/street refinement. That's the right endpoint for
+  // "give me the rate at this location"; /v2/taxes is for full-order tax
+  // calculation (which we do NOT want here because our add-ons aren't in the
+  // plan yet at lookup time).
+  const url = new URL(`https://api.taxjar.com/v2/rates/${encodeURIComponent(zip)}`);
+  if (state) url.searchParams.set('state', state);
+  if (city) url.searchParams.set('city', city);
+  if (country) url.searchParams.set('country', country);
+  let res, body;
+  try {
+    res = await fetch(url.toString(), {
+      method: 'GET',
+      headers: { 'Authorization': `Token token="${key}"`, 'Accept': 'application/json' },
+    });
+    body = await res.text();
+  } catch (e) {
+    return { ok: false, error: `TaxJar request failed: ${e.message}` };
+  }
+  let j;
+  try { j = body ? JSON.parse(body) : {}; } catch { j = null; }
+  if (!res.ok) {
+    const errMsg = (j && (j.error || j.detail)) || `TaxJar ${res.status}`;
+    return { ok: false, error: errMsg };
+  }
+  const rateObj = j && j.rate ? j.rate : null;
+  if (!rateObj) return { ok: false, error: 'TaxJar returned no rate.' };
+  // combined_rate is a decimal string like "0.0825" for 8.25%.
+  const combined = Number(rateObj.combined_rate);
+  if (!isFinite(combined) || combined < 0) return { ok: false, error: 'TaxJar returned invalid combined_rate.' };
+  return {
+    ok: true,
+    rate: combined,
+    source: `TaxJar ${rateObj.zip || zip}${rateObj.state ? `, ${rateObj.state}` : ''}`,
+    breakdown: {
+      state_rate: Number(rateObj.state_rate) || 0,
+      county_rate: Number(rateObj.county_rate) || 0,
+      city_rate: Number(rateObj.city_rate) || 0,
+      combined_district_rate: Number(rateObj.combined_district_rate) || 0,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Thin QW REST helper. Every call injects X-API-Key and JSON:API-ish envelope.
 // Throws on non-2xx with the response body appended for easier debugging.
 // ---------------------------------------------------------------------------
@@ -320,9 +381,10 @@ async function fetchHeader(base, apiKey, docId) {
   return qwFetch(base, apiKey, `/api/v1/qw/tables/DocumentHeaders/${encodeURIComponent(docId)}`);
 }
 
-async function createQuote(base, apiKey, { rep, customer, panels }) {
+async function createQuote(base, apiKey, { rep, customer, panels, addons }) {
   if (!rep) throw new Error('rep is required');
   if (!panels || !panels.length) throw new Error('At least one audit panel is required');
+  addons = addons || {};
 
   // Diagnostics we return on the response so the caller can see whether
   // enrichment and pricing lookups actually happened.
@@ -360,24 +422,31 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
   const productCache = new Map();
 
   // Build the FULL line plan up front, then dispatch in parallel.
+  // Structure:
+  //   1) Parts (from panel.order + custom)
+  //   2) Logistics Surcharge (single line, no header, 1.5% of CAR* subtotal)
+  //   3) "Training and Installation" comment header (or just "Training" or
+  //      just "Installation" if only one category is selected)
+  //   4) Training and Installation items
+  //   5) Shipping / Freight (single line)
+  //   6) Sales Tax (single line, rate resolved from customer address)
   const plan = [];
   for (const panel of panels) {
-    const bundle = panel.bundle_name || 'Bundle';
-    const unit = panel.unit_number || 1;
-    const missing = Array.isArray(panel.missing) ? panel.missing : [];
-    const damaged = Array.isArray(panel.damaged) ? panel.damaged : [];
-    const custom  = Array.isArray(panel.custom)  ? panel.custom  : [];
-    if (!missing.length && !damaged.length && !custom.length) continue;
+    // panels[].order is the new field. Fall back to .missing + .damaged for
+    // any old payloads still in flight.
+    const orderItems = Array.isArray(panel.order)
+      ? panel.order
+      : [].concat(
+          Array.isArray(panel.missing) ? panel.missing : [],
+          Array.isArray(panel.damaged) ? panel.damaged : []
+        );
+    const custom = Array.isArray(panel.custom) ? panel.custom : [];
+    if (!orderItems.length && !custom.length) continue;
 
     // BOM leaves identify their sellable parent through parentPartNumber.
-    // Consolidate every flagged leaf beneath one parent SKU, but preserve the
-    // findings as non-billable comment lines directly after that parent.
-    const catalogRows = [
-      ...missing.map(it => ({ ...it, auditStatus: 'Missing' })),
-      ...damaged.map(it => ({ ...it, auditStatus: 'Damaged' })),
-    ];
+    // Consolidate every flagged leaf beneath one parent SKU.
     const rollups = new Map();
-    catalogRows.forEach(it => {
+    orderItems.forEach(it => {
       const partNumber = it.parentPartNumber || it.partNumber || '';
       const description = it.parentDescription || it.description || '';
       const key = `${partNumber}\u0000${description}`;
@@ -386,8 +455,8 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
         description,
         leaves: [],
         // "Expanded" means we itemize sub-parts as comments under the parent SKU.
-        // If the user marked the whole assembly missing/damaged, we quote the
-        // parent as ONE line with no sub-part detail.
+        // If the user marked the whole assembly to order, we quote the parent
+        // as ONE line with no sub-part detail.
         isExpanded: !!it.parentPartNumber && !it.wholeAssembly,
         wholeAssembly: !!it.wholeAssembly,
       });
@@ -434,6 +503,128 @@ async function createQuote(base, apiKey, { rep, customer, panels }) {
         UnitPrice: prod?.price || 0,
         UnitCost:  prod?.cost  || 0,
         UnitList:  prod?.list  || prod?.price || 0,
+      });
+    }
+  }
+
+  // ---- Add-ons (in EXACT order Ryan wants on the printed quote) ----
+
+  // 1) Logistics Surcharge — 1.5% of every CAR* part currently in the plan.
+  //    Compute against the actual resolved UnitPrice × QtyBase so quantities
+  //    and QW catalog prices are respected (front-end can't see either).
+  if (addons.logistics) {
+    const rate = Number(addons.logisticsRate) || 0.015;
+    const carSubtotal = plan
+      .filter(l => l.LineType === 1 && /^CAR/i.test(l.PartNumber || l.ManufacturerPartNumber || ''))
+      .reduce((s, l) => s + (Number(l.UnitPrice)||0) * (Number(l.QtyBase)||0), 0);
+    const surchargeAmount = Math.round(carSubtotal * rate * 100) / 100;
+    if (surchargeAmount > 0) {
+      diag.logisticsBase = carSubtotal;
+      diag.logisticsAmount = surchargeAmount;
+      plan.push({
+        LineType: 1,
+        Manufacturer: 'COL',
+        ManufacturerPartNumber: 'LOGISTICS',
+        PartNumber: 'LOGISTICS',
+        Description: `Logistics Surcharge (${(rate*100).toFixed(1)}% of CAR* parts)`,
+        QtyBase: 1,
+        UnitPrice: surchargeAmount,
+        UnitCost: 0,
+        UnitList: surchargeAmount,
+      });
+    }
+  }
+
+  // 2) Training / Installation header + items
+  const training = Array.isArray(addons.training) ? addons.training.filter(t => t && t.sku) : [];
+  const installation = Array.isArray(addons.installation) ? addons.installation.filter(t => t && t.sku) : [];
+  if (training.length || installation.length) {
+    let headerText;
+    if (training.length && installation.length) headerText = 'Installation and Training';
+    else if (training.length) headerText = 'Training';
+    else headerText = 'Installation';
+    plan.push({
+      LineType: 2, // Comment line — shows as visual divider in QW
+      Manufacturer: '',
+      ManufacturerPartNumber: '',
+      PartNumber: '',
+      Description: headerText,
+      QtyBase: 0,
+      UnitPrice: 0,
+      UnitCost: 0,
+      UnitList: 0,
+    });
+    for (const t of training) {
+      plan.push({
+        LineType: 1,
+        Manufacturer: 'COL',
+        ManufacturerPartNumber: t.sku,
+        PartNumber: t.sku,
+        Description: t.label,
+        QtyBase: 1,
+        UnitPrice: Number(t.price) || 0,
+        UnitCost: 0,
+        UnitList: Number(t.price) || 0,
+      });
+    }
+    for (const t of installation) {
+      plan.push({
+        LineType: 1,
+        Manufacturer: 'COL',
+        ManufacturerPartNumber: t.sku,
+        PartNumber: t.sku,
+        Description: t.label,
+        QtyBase: 1,
+        UnitPrice: Number(t.price) || 0,
+        UnitCost: 0,
+        UnitList: Number(t.price) || 0,
+      });
+    }
+  }
+
+  // 3) Shipping / Freight
+  const freight = Number(addons.freight) || 0;
+  if (freight > 0) {
+    plan.push({
+      LineType: 1,
+      Manufacturer: 'COL',
+      ManufacturerPartNumber: 'FREIGHT',
+      PartNumber: 'FREIGHT',
+      Description: 'Shipping / Freight',
+      QtyBase: 1,
+      UnitPrice: freight,
+      UnitCost: 0,
+      UnitList: freight,
+    });
+  }
+
+  // 4) Sales Tax — rate resolved client-side via lookup_tax action.
+  //    Computed against ALL taxable lines (everything above except itself).
+  //    Training/Installation labor is generally NOT taxable in TX, but tax
+  //    liability varies by state; conservatively we tax everything and the
+  //    rep can adjust in QW if the customer disputes. Better to over-quote
+  //    than under-quote and eat the difference.
+  const taxRate = Number(addons.taxRate) || 0;
+  if (addons.tax && taxRate > 0) {
+    const taxableSubtotal = plan
+      .filter(l => l.LineType === 1)
+      .reduce((s, l) => s + (Number(l.UnitPrice)||0) * (Number(l.QtyBase)||0), 0);
+    const taxAmount = Math.round(taxableSubtotal * taxRate * 100) / 100;
+    if (taxAmount > 0) {
+      diag.taxRate = taxRate;
+      diag.taxSource = addons.taxSource || '';
+      diag.taxBase = taxableSubtotal;
+      diag.taxAmount = taxAmount;
+      plan.push({
+        LineType: 1,
+        Manufacturer: 'COL',
+        ManufacturerPartNumber: 'TAX',
+        PartNumber: 'TAX',
+        Description: `Sales Tax (${(taxRate*100).toFixed(3)}%)`,
+        QtyBase: 1,
+        UnitPrice: taxAmount,
+        UnitCost: 0,
+        UnitList: taxAmount,
       });
     }
   }
@@ -582,22 +773,31 @@ export const handler = async (event) => {
     }
 
     if (action === 'create_quote') {
-      const { rep, customer, panels } = payload;
+      const { rep, customer, panels, addons } = payload;
       const panelSummary = Array.isArray(panels)
         ? panels.map(p => ({
             bundle: p?.bundle_name,
             unit: p?.unit_number,
-            missing: Array.isArray(p?.missing) ? p.missing.length : 0,
-            damaged: Array.isArray(p?.damaged) ? p.damaged.length : 0,
+            order: Array.isArray(p?.order) ? p.order.length
+                 : (Array.isArray(p?.missing) ? p.missing.length : 0) + (Array.isArray(p?.damaged) ? p.damaged.length : 0),
             custom: Array.isArray(p?.custom) ? p.custom.length : 0,
           }))
         : null;
+      const addonSummary = addons ? {
+        logistics: !!addons.logistics,
+        training: Array.isArray(addons.training) ? addons.training.length : 0,
+        installation: Array.isArray(addons.installation) ? addons.installation.length : 0,
+        freight: Number(addons.freight) || 0,
+        tax: !!addons.tax,
+        taxRate: Number(addons.taxRate) || 0,
+      } : null;
       log('create_quote in:',
         'rep=', rep,
         'customer.id=', customer && customer.id,
         'customer.company=', customer && (customer.company || customer.customer),
-        'panels=', panelSummary);
-      const { docId, docNo, diag } = await createQuote(base, QW_API_KEY, { rep, customer, panels });
+        'panels=', panelSummary,
+        'addons=', addonSummary);
+      const { docId, docNo, diag } = await createQuote(base, QW_API_KEY, { rep, customer, panels, addons });
       log('createQuote done docId=', docId, 'docNo=', docNo, 'ms=', Date.now() - t0);
       const quoteUrl = `https://na.quotewerks.com/#/documents/${docId}`;
       let mail = { sent: false };
@@ -636,6 +836,12 @@ export const handler = async (event) => {
     if (action === 'resolve_rep_email') {
       const info = await resolveRepEmail(base, QW_API_KEY, payload.rep || '');
       return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true, ...info }) };
+    }
+
+    if (action === 'lookup_tax') {
+      const info = await lookupTaxRate(payload.customer || {});
+      const status = info.ok ? 200 : 400;
+      return { statusCode: status, headers: cors, body: JSON.stringify(info) };
     }
 
     log('unknown action:', action);

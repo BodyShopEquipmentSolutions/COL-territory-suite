@@ -117,20 +117,31 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--brand-2)
 .parent-status-row{display:flex;gap:6px;margin:6px 0 10px;flex-wrap:wrap;padding-left:22px}
 .parent-status-row .status-btn{font-size:13px;padding:8px 10px}
 .audit-parent.roll-present{background:linear-gradient(90deg,rgba(22,163,74,.08),transparent 40%)}
-.audit-parent.roll-missing{background:linear-gradient(90deg,rgba(220,38,38,.08),transparent 40%)}
-.audit-parent.roll-damaged,.audit-parent.roll-mixed{background:linear-gradient(90deg,rgba(217,119,6,.08),transparent 40%)}
+.audit-parent.roll-order,.audit-parent.roll-mixed{background:linear-gradient(90deg,rgba(217,119,6,.08),transparent 40%)}
 .roll-badge{font-weight:600}
 .audit-parent.roll-present .roll-badge{color:#16a34a}
-.audit-parent.roll-missing .roll-badge{color:#dc2626}
-.audit-parent.roll-damaged .roll-badge,.audit-parent.roll-mixed .roll-badge{color:#d97706}
+.audit-parent.roll-order .roll-badge,.audit-parent.roll-mixed .roll-badge{color:#d97706}
 .audit-item .info{flex:1;min-width:0}
 .audit-item .pn{font-size:12px;color:var(--brand);font-weight:600}
 .audit-item .desc{font-size:15px;line-height:1.3;font-weight:500}
 .status-row{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
 .status-btn{flex:1;min-width:80px;padding:10px 8px;border-radius:8px;border:2px solid var(--line);background:#fff;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink);text-align:center;min-height:44px}
 .status-btn.on-present{border-color:var(--ok);background:var(--ok);color:#fff}
-.status-btn.on-missing{border-color:var(--miss);background:var(--miss);color:#fff}
-.status-btn.on-damaged{border-color:var(--warn);background:var(--warn);color:#fff}
+.status-btn.on-order{border-color:var(--warn);background:var(--warn);color:#fff}
+/* Add-ons in review dialog */
+.addons-card{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:12px;margin:12px 0}
+.addons-title{font-weight:700;font-size:14px;color:var(--brand);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px}
+.addon-section{padding:8px 0;border-top:1px solid var(--line)}
+.addon-section:first-of-type{border-top:none;padding-top:0}
+.addon-section-title{font-weight:600;font-size:13px;color:var(--ink);margin-bottom:6px}
+.addon-row{display:flex;align-items:center;gap:10px;padding:6px 0;cursor:pointer;font-size:14px}
+.addon-row input[type="checkbox"]{width:20px;height:20px;flex-shrink:0;cursor:pointer;accent-color:var(--brand)}
+.addon-row .addon-label{flex:1;min-width:0}
+.addon-row .addon-price{font-weight:600;color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums}
+.addon-row-input{cursor:default}
+.addon-input{width:120px;padding:8px 10px;font-size:14px;border:1px solid var(--line);border-radius:6px;text-align:right;font-variant-numeric:tabular-nums}
+.tax-lookup-row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:6px}
+.tax-hint{font-size:12px;color:var(--muted)}
 .followup{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .followup .stepper{flex-shrink:0}
 .followup .note-toggle{background:none;border:none;color:var(--brand-2);font-size:13px;font-weight:600;cursor:pointer;padding:6px 0}
@@ -259,14 +270,45 @@ let state = {
   panels: [],            // built when Start Audit is clicked
   activePanel: 0,
   result: null,          // {docNo, docId, quoteUrl, mail}
+  addons: {
+    logistics: false,    // 1.5% on CAR* line subtotal
+    training: [],        // array of TRAINING_OPTIONS.sku
+    installation: [],    // array of INSTALL_OPTIONS.sku
+    freight: 0,          // dollar amount
+    tax: false,          // include tax line
+    taxRate: null,       // decimal (0.0825 = 8.25%), populated from address lookup
+    taxAmount: 0,        // resolved dollar amount
+    taxSource: '',       // 'taxjar' | 'manual' | ''
+  },
 };
 
 // panels[i] = {
 //   bundle_name, unit_number, items: [
-//     { partNumber, description, status: 'present'|'missing'|'damaged'|'', qty, note }
+//     { partNumber, description, status: 'present'|'order'|'', qty, note }
 //   ],
 //   custom: [ { id?, partNumber, description, qty, note } ]
 // }
+//
+// Quote-level add-ons live on state.addons and get sent alongside panels:
+//   { logistics:boolean, training:[skus], installation:[skus], freight:number, tax:boolean, taxRate:number, taxAmount:number }
+
+// ============================================================================
+// Add-on catalog: training + installation options with fixed prices.
+// ============================================================================
+const TRAINING_OPTIONS = [
+  { sku: 'TRN-BENCH',    label: 'Bench/Measuring Training', price: 950 },
+  { sku: 'TRN-EVO',      label: 'Evo Training',             price: 950 },
+  { sku: 'TRN-CTR9',     label: 'CTR9 Training',            price: 450 },
+  { sku: 'TRN-CMI300',   label: 'CMI300 Training',          price: 450 },
+  { sku: 'TRN-SPEEDBEN', label: 'Speed Bench Training',     price: 450 },
+  { sku: 'TRN-POINTX',   label: 'Point X Training',         price: 450 },
+];
+const INSTALL_OPTIONS = [
+  { sku: 'INST-BENCHRACK', label: 'Benchrack Installation',                price: 1950 },
+  { sku: 'INST-WSS-WALL',  label: 'Work Space Solutions Wall Installation', price: 1950 },
+  { sku: 'INST-SPEEDBEN',  label: 'Speed Bench Installation',              price: 1250 },
+];
+const LOGISTICS_RATE = 0.015; // 1.5% surcharge on CAR* parts
 
 const $  = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
@@ -642,10 +684,9 @@ function startAudit(){
 // STEP 4 — Audit panels
 // ============================================================================
 function panelSummary(p){
-  const miss = p.items.filter(i => i.status === 'missing').length;
-  const dmg  = p.items.filter(i => i.status === 'damaged').length;
-  const cus  = (p.custom || []).length;
-  return { miss, dmg, cus, hasWork: miss + dmg + cus > 0 };
+  const ord = p.items.filter(i => i.status === 'order').length;
+  const cus = (p.custom || []).length;
+  return { ord, cus, hasWork: ord + cus > 0 };
 }
 function panelDone(p){
   // A panel counts as "audited" once the tech has visited it (opened it at
@@ -684,9 +725,8 @@ function nodeRollupStatus(node){
   if (!leaves.length) return '';
   const stats = leaves.reduce((a,l)=>{ a[l.status]=(a[l.status]||0)+1; return a; }, {});
   if (stats.present === leaves.length) return 'present';
-  if (stats.missing === leaves.length) return 'missing';
-  if ((stats.damaged||0) + (stats.missing||0) === leaves.length) return 'damaged';
-  if (stats.missing || stats.damaged) return 'mixed';
+  if (stats.order === leaves.length) return 'order';
+  if (stats.order) return 'mixed';
   return '';
 }
 function renderAuditNode(node, panel, depth){
@@ -694,7 +734,7 @@ function renderAuditNode(node, panel, depth){
   const open = !!(panel.expanded && panel.expanded[node.path]);
   const descendants = collectAuditLeaves(node.children || []).length;
   const roll = nodeRollupStatus(node);
-  const rollLabel = roll === 'present' ? '✓ All present' : roll === 'missing' ? '✗ All missing' : roll === 'damaged' ? '⚠ All damaged/missing' : roll === 'mixed' ? '● Partial' : '';
+  const rollLabel = roll === 'present' ? '✓ All present' : roll === 'order' ? '⚠ All to order' : roll === 'mixed' ? '● Partial' : '';
   const rollClass = roll ? `roll-${roll}` : '';
   return `
     <div class="audit-branch depth-${depth}">
@@ -705,9 +745,8 @@ function renderAuditNode(node, panel, depth){
       </button>
       <div class="parent-status-row">
         <button class="status-btn ${roll==='present'?'on-present':''}" onclick="setAssemblyStatus('${escapeHtml(node.path)}','present')">Present (whole assembly)</button>
-        <button class="status-btn ${roll==='missing'?'on-missing':''}" onclick="setAssemblyStatus('${escapeHtml(node.path)}','missing')">Missing (whole assembly)</button>
-        <button class="status-btn" onclick="setAssemblyStatus('${escapeHtml(node.path)}','pick-missing')">Missing (pick sub-parts)</button>
-        <button class="status-btn ${roll==='damaged'||roll==='mixed'?'on-damaged':''}" onclick="setAssemblyStatus('${escapeHtml(node.path)}','damaged')">Damaged (pick sub-parts)</button>
+        <button class="status-btn ${roll==='order'?'on-order':''}" onclick="setAssemblyStatus('${escapeHtml(node.path)}','order')">Order (whole assembly)</button>
+        <button class="status-btn ${roll==='mixed'?'on-order':''}" onclick="setAssemblyStatus('${escapeHtml(node.path)}','pick-order')">Order (pick sub-parts)</button>
       </div>
       <div class="audit-children" ${open ? '' : 'hidden'}>${(node.children || []).map(child => renderAuditNode(child, panel, depth + 1)).join('')}</div>
     </div>`;
@@ -731,12 +770,12 @@ function setAssemblyStatus(path, status){
   if (status === 'present'){
     leaves.forEach(l => { l.status = 'present'; l.qty = 1; l.note = ''; l.wholeAssembly = false; });
     panel.expanded[path] = false;
-  } else if (status === 'missing'){
-    // Whole assembly missing — mark each leaf as part of the whole so the
+  } else if (status === 'order'){
+    // Whole assembly to order — mark each leaf as part of the whole so the
     // server rolls them up into ONE parent SKU line with no sub-part detail.
-    leaves.forEach(l => { l.status = 'missing'; l.qty = 1; l.wholeAssembly = true; });
+    leaves.forEach(l => { l.status = 'order'; l.qty = 1; l.wholeAssembly = true; });
     panel.expanded[path] = false;
-  } else if (status === 'damaged' || status === 'pick-missing'){
+  } else if (status === 'pick-order'){
     // Picking individual sub-parts — clear the whole-assembly flag so
     // detail comments show up on the quote for each flagged leaf.
     leaves.forEach(l => { l.wholeAssembly = false; });
@@ -746,15 +785,14 @@ function setAssemblyStatus(path, status){
 }
 function renderAuditItem(it, idx, depth=0){
   const notesOpen = !!it.note || it._noteOpen;
-  const needsQty = it.status === 'missing' || it.status === 'damaged';
+  const needsQty = it.status === 'order';
   const needed = it.qtyNeeded && it.qtyNeeded !== 1 ? `<div class="required-qty">Qty needed: ${escapeHtml(it.qtyNeeded)}</div>` : '';
   return `
     <div class="audit-item" data-idx="${idx}" data-audit-key="${escapeHtml(it.auditKey || it.partNumber)}" style="${depth ? 'margin-left:0' : ''}">
       <div class="head">${it.img ? `<img class="thumb" src="${escapeHtml(imgUrl(it.img))}" alt="" onerror="this.style.display='none'" onclick="showLightbox('${escapeHtml(imgUrl(it.img))}')">` : ''}<div class="info"><div class="pn">${escapeHtml(it.partNumber)}</div><div class="desc">${escapeHtml(it.description)}</div>${needed}</div></div>
       <div class="status-row">
         <button class="status-btn ${it.status==='present'?'on-present':''}" onclick="setItemStatus(${idx},'present')">Present</button>
-        <button class="status-btn ${it.status==='missing'?'on-missing':''}" onclick="setItemStatus(${idx},'missing')">Missing</button>
-        <button class="status-btn ${it.status==='damaged'?'on-damaged':''}" onclick="setItemStatus(${idx},'damaged')">Damaged</button>
+        <button class="status-btn ${it.status==='order'?'on-order':''}" onclick="setItemStatus(${idx},'order')">Order</button>
       </div>
       ${needsQty ? `<div class="followup"><div class="stepper"><button onclick="stepItemQty(${idx},-1)">−</button><span class="qty">× ${it.qty}</span><button onclick="stepItemQty(${idx},1)">+</button></div><button class="note-toggle" onclick="toggleNote(${idx})">${notesOpen ? 'Hide note' : '+ Note'}</button></div>${notesOpen ? `<div class="note-input"><textarea placeholder="Optional note (e.g. bent, seized, wrong revision)…" oninput="setItemNote(${idx}, this.value)">${escapeHtml(it.note)}</textarea></div>` : ''}` : ''}
     </div>`;
@@ -797,16 +835,16 @@ function afterAudit(){
   bar.style.display = '';
   const totalPanels = state.panels.length;
   const donePanels = state.panels.filter(panelDone).length;
-  let miss=0, dmg=0, cus=0;
+  let ord=0, cus=0;
   state.panels.forEach(p => {
     const s = panelSummary(p);
-    miss += s.miss; dmg += s.dmg; cus += s.cus;
+    ord += s.ord; cus += s.cus;
   });
   const canQuote = state.panels.some(p => panelSummary(p).hasWork);
   $('#sticky-inner').innerHTML = `
     <div class="stat"><span>Audited</span>${donePanels} / ${totalPanels}</div>
-    <div class="stat miss"><span>Missing</span>${miss}</div>
-    <div class="stat warn"><span>Damaged</span>${dmg}</div>
+    <div class="stat warn"><span>To order</span>${ord}</div>
+    <div class="stat"><span>Custom</span>${cus}</div>
     <div class="spacer"></div>
     <button class="btn" id="quote-btn" ${canQuote?'':'disabled'} onclick="openReview()">Create Quote</button>
   `;
@@ -816,7 +854,7 @@ function setItemStatus(idx, s){
   const p = state.panels[state.activePanel];
   const it = p.items[idx];
   it.status = s;
-  if (s === 'missing' || s === 'damaged'){ if (!it.qty) it.qty = 1; }
+  if (s === 'order'){ if (!it.qty) it.qty = 1; }
   render();
 }
 function stepItemQty(idx, delta){
@@ -907,7 +945,7 @@ function addFromCatalog(i){
 // ============================================================================
 function quotePreviewGroups(panel){
   const rows = [
-    ...(panel.items || []).filter(i => i.status === 'missing' || i.status === 'damaged'),
+    ...(panel.items || []).filter(i => i.status === 'order'),
     ...(panel.custom || []).map(i => ({...i, status:'custom'})),
   ];
   const groups = new Map();
@@ -933,20 +971,19 @@ function renderQuotePreview(){
 }
 function openReview(){
   const dlg = $('#review-dlg');
-  let miss=0, dmg=0, cus=0;
+  let ord=0, cus=0;
   // Count what will actually hit QuoteWerks: whole-assembly rollups become
   // ONE line each; individual sub-part picks each count as one.
   state.panels.forEach(p => {
     const seenWhole = new Set();
     (p.items || []).forEach(i => {
-      if (i.status !== 'missing' && i.status !== 'damaged') return;
+      if (i.status !== 'order') return;
       if (i.wholeAssembly && i.parentPartNumber) {
-        const key = i.status + '\u0000' + i.parentPartNumber;
+        const key = i.parentPartNumber;
         if (seenWhole.has(key)) return;
         seenWhole.add(key);
       }
-      if (i.status === 'missing') miss++;
-      else if (i.status === 'damaged') dmg++;
+      ord++;
     });
     cus += (p.custom || []).length;
   });
@@ -963,19 +1000,164 @@ function openReview(){
     </div>
     <div style="margin-bottom:14px">
       <label>Line items</label>
-      <div style="font-size:14px">${miss} missing part${miss===1?'':'s'}, ${dmg} damaged part${dmg===1?'':'s'}, ${cus} custom part${cus===1?'':'s'} across ${activePanels} audit panel${activePanels===1?'':'s'}.</div>
+      <div style="font-size:14px">${ord} part${ord===1?'':'s'} to order, ${cus} custom part${cus===1?'':'s'} across ${activePanels} audit panel${activePanels===1?'':'s'}.</div>
     </div>
     <div style="margin-bottom:12px"><label>Quote preview</label>${renderQuotePreview()}</div>
+    <div id="addons-section">${renderAddons()}</div>
     <div class="info-banner">Creating a quote in QuoteWerks is a real, irreversible action. The rep will receive an email with the quote link.</div>
     <div id="review-error" style="display:none" class="error-banner"></div>
   `;
   dlg.showModal();
+}
+
+// ============================================================================
+// Add-ons: logistics surcharge, training, installation, freight, tax
+// ============================================================================
+function fmtMoney(n){
+  const v = Number(n) || 0;
+  return '$' + v.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function carPartsSubtotal(){
+  // Sums *retail price* of every quoted line whose part number starts with CAR.
+  // We don't have QW prices client-side (they're resolved server-side from
+  // Products_AllProducts_Products), so this frontend estimate uses only the
+  // static prices we know about. The AUTHORITATIVE logistics amount is
+  // recomputed server-side from the actual QW line prices so quantities and
+  // real catalog prices are respected. This preview is guidance only.
+  return null; // signal "server will compute"
+}
+function renderAddons(){
+  const a = state.addons;
+  const trainingSelected = new Set(a.training || []);
+  const installSelected  = new Set(a.installation || []);
+
+  const trainingOpts = TRAINING_OPTIONS.map(t => `
+    <label class="addon-row">
+      <input type="checkbox" ${trainingSelected.has(t.sku)?'checked':''} onchange="toggleTraining('${t.sku}', this.checked)">
+      <span class="addon-label">${escapeHtml(t.label)}</span>
+      <span class="addon-price">${fmtMoney(t.price)}</span>
+    </label>`).join('');
+  const installOpts = INSTALL_OPTIONS.map(t => `
+    <label class="addon-row">
+      <input type="checkbox" ${installSelected.has(t.sku)?'checked':''} onchange="toggleInstall('${t.sku}', this.checked)">
+      <span class="addon-label">${escapeHtml(t.label)}</span>
+      <span class="addon-price">${fmtMoney(t.price)}</span>
+    </label>`).join('');
+
+  const taxHint = a.tax
+    ? (a.taxRate != null
+        ? `Rate: ${(a.taxRate*100).toFixed(3)}% <span style="color:var(--muted)">(${escapeHtml(a.taxSource||'lookup')})</span>`
+        : `<span style="color:var(--warn)">Rate not yet resolved — click Look up</span>`)
+    : '';
+
+  return `
+    <div class="addons-card">
+      <div class="addons-title">Optional add-ons</div>
+
+      <div class="addon-section">
+        <label class="addon-row">
+          <input type="checkbox" ${a.logistics?'checked':''} onchange="toggleLogistics(this.checked)">
+          <span class="addon-label"><strong>Logistics Surcharge</strong> <span style="color:var(--muted);font-weight:400;font-size:12px">(1.5% of CAR* parts, one line)</span></span>
+        </label>
+      </div>
+
+      <div class="addon-section">
+        <div class="addon-section-title">Training <span style="color:var(--muted);font-weight:400;font-size:12px">(select any)</span></div>
+        ${trainingOpts}
+      </div>
+
+      <div class="addon-section">
+        <div class="addon-section-title">Installation <span style="color:var(--muted);font-weight:400;font-size:12px">(select any)</span></div>
+        ${installOpts}
+      </div>
+
+      <div class="addon-section">
+        <div class="addon-section-title">Shipping / Freight</div>
+        <label class="addon-row addon-row-input">
+          <span class="addon-label">Freight charge ($)</span>
+          <input type="number" min="0" step="0.01" value="${a.freight || ''}" placeholder="0.00"
+                 oninput="setFreight(this.value)" class="addon-input">
+        </label>
+      </div>
+
+      <div class="addon-section">
+        <div class="addon-section-title">Sales Tax</div>
+        <label class="addon-row">
+          <input type="checkbox" ${a.tax?'checked':''} onchange="toggleTax(this.checked)">
+          <span class="addon-label">Add sales tax (looked up from customer address)</span>
+        </label>
+        ${a.tax ? `
+          <div class="tax-lookup-row">
+            <div class="tax-hint">${taxHint}</div>
+            <button class="btn sec sm" onclick="lookupTax()" id="tax-lookup-btn">Look up rate</button>
+          </div>
+        ` : ''}
+      </div>
+    </div>`;
+}
+function rerenderAddons(){
+  const el = $('#addons-section');
+  if (el) el.innerHTML = renderAddons();
+}
+function toggleLogistics(v){ state.addons.logistics = !!v; rerenderAddons(); }
+function toggleTraining(sku, v){
+  const set = new Set(state.addons.training || []);
+  if (v) set.add(sku); else set.delete(sku);
+  state.addons.training = [...set];
+  rerenderAddons();
+}
+function toggleInstall(sku, v){
+  const set = new Set(state.addons.installation || []);
+  if (v) set.add(sku); else set.delete(sku);
+  state.addons.installation = [...set];
+  rerenderAddons();
+}
+function setFreight(v){
+  const n = Number(v);
+  state.addons.freight = isFinite(n) && n > 0 ? n : 0;
+  // Don't rerender — preserves input focus
+}
+function toggleTax(v){
+  state.addons.tax = !!v;
+  if (!v) { state.addons.taxRate = null; state.addons.taxAmount = 0; state.addons.taxSource = ''; }
+  rerenderAddons();
+}
+async function lookupTax(){
+  const btn = $('#tax-lookup-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Looking up…'; }
+  try {
+    const c = state.customer || {};
+    const res = await fetch('/.netlify/functions/create-qw-quote', {
+      method: 'POST',
+      headers: {'content-type':'application/json'},
+      body: JSON.stringify({
+        action: 'lookup_tax',
+        customer: { address: c.address, city: c.city, state: c.state, zip: c.zip, country: c.country || 'US' },
+      }),
+    });
+    const j = await res.json();
+    if (!j.ok) throw new Error(j.error || 'Tax lookup failed');
+    state.addons.taxRate = Number(j.rate) || 0;
+    state.addons.taxSource = j.source || 'lookup';
+  } catch(e){
+    alert('Tax lookup failed: ' + e.message + '\n\nYou can proceed without tax, or fix the customer address and try again.');
+    state.addons.taxRate = null;
+  } finally {
+    rerenderAddons();
+  }
 }
 function closeReview(){ $('#review-dlg').close(); }
 async function confirmCreateQuote(){
   const btn = $('#review-confirm');
   const err = $('#review-error');
   err.style.display = 'none';
+  // If user asked for tax but never resolved a rate, block — easier than
+  // silently sending a $0 tax line and having them wonder later.
+  if (state.addons.tax && (state.addons.taxRate == null || state.addons.taxRate === 0)) {
+    err.textContent = 'Tax is enabled but no rate resolved. Click "Look up rate" or turn off Sales Tax.';
+    err.style.display = 'block';
+    return;
+  }
   btn.disabled = true;
   btn.textContent = 'Creating quote…';
   // Rolling status — tell the user roughly what's happening. Server-side we
@@ -992,8 +1174,8 @@ async function confirmCreateQuote(){
   // Build payload. Whole-assembly rollups collapse to ONE row for the parent
   // SKU (with the parent description). Individual picks keep their own
   // partNumber + parent link so the server can group them under one parent.
-  function toLines(items, status) {
-    const flagged = items.filter(i => i.status === status);
+  function toLines(items) {
+    const flagged = items.filter(i => i.status === 'order');
     const wholeParents = new Map();
     const picks = [];
     for (const i of flagged) {
@@ -1023,14 +1205,28 @@ async function confirmCreateQuote(){
     .map(p => ({
       bundle_name: p.bundle_name,
       unit_number: p.unit_number,
-      missing: toLines(p.items, 'missing'),
-      damaged: toLines(p.items, 'damaged'),
+      order: toLines(p.items),
       custom: (p.custom || []).map(c => ({
         partNumber: c.partNumber || (c.id ? 'CAR' + c.id : ''),
         description: c.description || '',
         qty: c.qty || 1,
       })),
     }));
+
+  // Resolve training/installation SKUs to full { sku, label, price } objects
+  // so the server doesn't need its own catalog copy.
+  const trainingCat = new Map(TRAINING_OPTIONS.map(t => [t.sku, t]));
+  const installCat  = new Map(INSTALL_OPTIONS.map(t => [t.sku, t]));
+  const addonsPayload = {
+    logistics: !!state.addons.logistics,
+    logisticsRate: LOGISTICS_RATE,
+    training: (state.addons.training || []).map(sku => trainingCat.get(sku)).filter(Boolean),
+    installation: (state.addons.installation || []).map(sku => installCat.get(sku)).filter(Boolean),
+    freight: Number(state.addons.freight) || 0,
+    tax: !!state.addons.tax,
+    taxRate: state.addons.tax ? (Number(state.addons.taxRate) || 0) : 0,
+    taxSource: state.addons.taxSource || '',
+  };
 
   // Client timeout — the server now creates the QW quote synchronously (fast)
   // and queues the email as a background function (returns 202 in <1s). Total
@@ -1046,6 +1242,7 @@ async function confirmCreateQuote(){
         rep: state.rep,
         customer: state.customer,
         panels,
+        addons: addonsPayload,
       }),
       signal: controller.signal,
     });
@@ -1101,6 +1298,7 @@ function startAnother(){
   state = {
     step: 'customer', rep: keepRep, customer: null,
     bundles: {}, panels: [], activePanel: 0, result: null,
+    addons: { logistics: false, training: [], installation: [], freight: 0, tax: false, taxRate: null, taxAmount: 0, taxSource: '' },
   };
   render();
 }
