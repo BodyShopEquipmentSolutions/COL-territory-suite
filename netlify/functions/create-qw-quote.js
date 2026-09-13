@@ -835,6 +835,26 @@ export const handler = async (event) => {
       return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true, ...info }) };
     }
 
+    if (action === 'inspect_lines') {
+      const docId = payload.docId;
+      if (!docId) return { statusCode: 400, headers: cors, body: JSON.stringify({ ok:false, error:'docId required'}) };
+      // Filter DocumentItems by DocRecGUID
+      const data = await qwFetch(base, QW_API_KEY, `/api/v1/qw/tables/DocumentItems?filter[DocRecGUID]=${encodeURIComponent(docId)}&page[size]=100`);
+      const rows = (data && data.data) || [];
+      const lines = rows.map(r => {
+        const a = r.attributes || {};
+        return {
+          n: a.LineNumberActual,
+          type: a.LineType,
+          pn: a.PartNumber,
+          desc: a.Description,
+          qty: a.QtyBase,
+          price: a.UnitPrice,
+        };
+      }).sort((x,y) => (x.n||0) - (y.n||0));
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok:true, count: lines.length, lines }) };
+    }
+
     if (action === 'inspect_header') {
       // Diagnostic: dump every attribute on a DocumentHeaders row so we can
       // verify what QW is storing after a create.
