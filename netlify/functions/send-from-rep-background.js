@@ -233,14 +233,16 @@ export async function probeAttachmentDownload({ docRecGuid, repUsername, attachm
     coverPageMessage:'', qwPrintMethod: 5, createPOforEachVendor: null, makePDFReadOnly: null,
   });
   const printPdfId = pdfResp2?.pdfList?.[0]?.printPdfId;
-  // Also try Print action (qwPrintMethod: 4 = Print/Preview, 5 = SaveAsPdf, 3 = Preview?)
-  const previewResp = await qwPost(jar, releasePath, 'api/DocumentDeliver/GeneratePrintPdf', {
-    coverPageMessage:'', qwPrintMethod: 4, createPOforEachVendor: null, makePDFReadOnly: null,
+  // qwPrintMethod: 1 = Preview (like clicking Preview button — returns real id, PDF written to tenant store)
+  const previewResp1 = await qwPost(jar, releasePath, 'api/DocumentDeliver/GeneratePrintPdf', {
+    coverPageMessage:'', qwPrintMethod: 1, createPOforEachVendor: null, makePDFReadOnly: null,
   }).catch(e => ({ error: String(e) }));
-  const previewResp3 = await qwPost(jar, releasePath, 'api/DocumentDeliver/GeneratePrintPdf', {
-    coverPageMessage:'', qwPrintMethod: 3, createPOforEachVendor: null, makePDFReadOnly: null,
+  const previewResp2 = await qwPost(jar, releasePath, 'api/DocumentDeliver/GeneratePrintPdf', {
+    coverPageMessage:'', qwPrintMethod: 2, createPOforEachVendor: null, makePDFReadOnly: null,
   }).catch(e => ({ error: String(e) }));
-  const aiiResp = await getAii(jar, releasePath).catch(()=>null);
+  const previewResp0 = await qwPost(jar, releasePath, 'api/DocumentDeliver/GeneratePrintPdf', {
+    coverPageMessage:'', qwPrintMethod: 0, createPOforEachVendor: null, makePDFReadOnly: null,
+  }).catch(e => ({ error: String(e) }));
 
   const candidates = [
     // JSON:API-style
@@ -256,10 +258,18 @@ export async function probeAttachmentDownload({ docRecGuid, repUsername, attachm
     { url: `api/Email/GetEmailAttachment`, m:'POST', body:{ attachmentId: attId } },
     { url: `api/Email/GetAttachment`, m:'POST', body:{ attachmentId: attId } },
     { url: `api/Email/DownloadAttachment`, m:'POST', body:{ attachmentId: attId } },
-    // The winning candidate discovered from JS bundle grep
-    { url: `PrintPreviewPdf?id=${encodeURIComponent(printPdfId || attId)}&inline=true`, m:'GET', note:'PrintPreviewPdf-nopath-noaii' },
-    { url: `PrintPreviewPdf?id=${encodeURIComponent(attId)}&inline=true`, m:'GET', note:'PrintPreviewPdf-attId-noaii' },
   ];
+  // Add PrintPreviewPdf attempts for every non-zero id we saw across the preview methods
+  const ids = new Set();
+  const collect = (r) => {
+    const list = r?.pdfList || [];
+    for (const p of list) if (p?.printPdfId && p.printPdfId !== '00000000-0000-0000-0000-000000000000') ids.add(p.printPdfId);
+  };
+  collect(pdfResp2); collect(previewResp0); collect(previewResp1); collect(previewResp2);
+  for (const id of ids) {
+    candidates.push({ url: `PrintPreviewPdf?id=${encodeURIComponent(id)}&inline=true`, m:'GET', note:`preview-id ${id.slice(0,8)}` });
+    candidates.push({ url: `PrintPreviewPdf?id=${encodeURIComponent(id)}&inline=false`, m:'GET', note:`preview-id-download ${id.slice(0,8)}` });
+  }
 
   const results = [];
   for (const c of candidates) {
@@ -295,7 +305,7 @@ export async function probeAttachmentDownload({ docRecGuid, repUsername, attachm
       results.push({ url: c.url, method: c.m, error: e.message });
     }
   }
-  return { attId, printPdfId, pdfResp2, previewResp, previewResp3, aiiResp, hit: null, tried: results };
+  return { attId, printPdfId, pdfResp2, previewResp0, previewResp1, previewResp2, idsTried: Array.from(ids), hit: null, tried: results };
 }
 
 // Diagnostic: run through login → deliver → SetLayout → GeneratePrintPdf →
