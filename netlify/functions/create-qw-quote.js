@@ -439,7 +439,7 @@ async function createQuote(base, apiKey, { rep, customer, panels, addons }) {
         ? `${bundleName} (Unit ${panel.unit_number})`
         : bundleName;
       plan.push({
-        LineType: 32, // SectionHeader — triggers rich-text band 822
+        LineType: 2, // Comment — plain italic gray bundle header (user preference)
         Manufacturer: '',
         ManufacturerPartNumber: '',
         PartNumber: '',
