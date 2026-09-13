@@ -838,6 +838,21 @@ export const handler = async (event) => {
       return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true, ...info }) };
     }
 
+    if (action === 'inspect_header') {
+      // Diagnostic: dump every attribute on a DocumentHeaders row so we can
+      // see which tax fields QW exposes.
+      const docId = payload.docId;
+      if (!docId) return { statusCode: 400, headers: cors, body: JSON.stringify({ ok:false, error:'docId required'}) };
+      const data = await qwFetch(base, QW_API_KEY, `/api/v1/qw/tables/DocumentHeaders/${encodeURIComponent(docId)}`);
+      const attrs = data && data.data && data.data.attributes || {};
+      // Just the tax-related fields
+      const taxFields = {};
+      for (const [k,v] of Object.entries(attrs)) {
+        if (/tax|zip4|shipto|verified/i.test(k)) taxFields[k] = v;
+      }
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok:true, allKeys: Object.keys(attrs).sort(), taxFields }) };
+    }
+
     if (action === 'lookup_tax') {
       const info = await lookupTaxRate(payload.customer || {});
       const status = info.ok ? 200 : 400;
