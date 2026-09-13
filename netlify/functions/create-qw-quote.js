@@ -862,7 +862,8 @@ export const handler = async (event) => {
       const docId = payload.docId;
       if (!docId) return { statusCode: 400, headers: cors, body: JSON.stringify({ ok:false, error:'docId required'}) };
       const results = [];
-      for (let lt = 0; lt <= 9; lt++) {
+      const validLts = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512];
+      for (const lt of validLts) {
         const attrs = {
           DocID_ref: docId,
           DocRecGUID: docId,
