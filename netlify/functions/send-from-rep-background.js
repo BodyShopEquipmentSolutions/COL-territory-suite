@@ -329,6 +329,16 @@ async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride,
     docRecGuid,
   }, SEND_TIMEOUT_MS), SEND_TIMEOUT_MS);
 
+  // QuoteWerks returns HTTP 200 with success:false when SMTP/OAuth actually
+  // failed — treat that as a real error so we don't tell users "queued" for
+  // an email that never left QW.
+  if (sendResp && sendResp.success === false) {
+    const err = new Error(`QW SendEmail rejected: ${sendResp.errorMessage || 'no error message'}`);
+    err.timings = timings;
+    err.sendResponse = sendResp;
+    throw err;
+  }
+
   return {
     ok: true,
     releasePath,
