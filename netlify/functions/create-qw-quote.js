@@ -856,6 +856,33 @@ export const handler = async (event) => {
       return { statusCode: 200, headers: cors, body: JSON.stringify({ ok:true, count: lines.length, lines, raw: dumpRaw }) };
     }
 
+    if (action === 'test_linetypes') {
+      // Insert one line for each LineType 0..9 into the given quote so we can
+      // preview and identify which integer maps to Heading/SectionHeader.
+      const docId = payload.docId;
+      if (!docId) return { statusCode: 400, headers: cors, body: JSON.stringify({ ok:false, error:'docId required'}) };
+      const results = [];
+      for (let lt = 0; lt <= 9; lt++) {
+        const attrs = {
+          DocID_ref: docId,
+          DocRecGUID: docId,
+          LineType: lt,
+          Description: `--- TEST LineType ${lt} ---`,
+          RichText: `LineType ${lt} rich text sample`,
+          QtyBase: 0, UnitPrice: 0, UnitCost: 0, UnitList: 0,
+          Manufacturer: '', PartNumber: '', ManufacturerPartNumber: '',
+        };
+        try {
+          const body = { data: { type: 'DocumentItems', attributes: attrs } };
+          const r = await qwFetch(base, QW_API_KEY, '/api/v1/qw/tables/DocumentItems', { method:'POST', body });
+          results.push({ lt, ok:true, id: r?.data?.id, n: r?.data?.attributes?.LineNumberActual });
+        } catch (e) {
+          results.push({ lt, ok:false, error: e.message });
+        }
+      }
+      return { statusCode:200, headers:cors, body: JSON.stringify({ ok:true, docId, results }) };
+    }
+
     if (action === 'inspect_header') {
       // Diagnostic: dump every attribute on a DocumentHeaders row so we can
       // verify what QW is storing after a create.
