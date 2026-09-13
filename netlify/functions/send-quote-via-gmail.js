@@ -182,9 +182,18 @@ export const handler = async (event) => {
       () => qwPost(jar, releasePath, 'api/DocumentDeliver/GetDocumentDeliverInitData',
                    { docRecGuid, isAdministrationMode: false }));
     const layouts = deliverInit?.newLayouts || [];
-    const primary = layouts.find(l => l.isSelectedPrimary)
-                 || layouts.find(l => l.layoutName === 'COL Quote Layout 2 - WIP')
-                 || layouts[0];
+    // Prefer the newest patched layout. If Ryan imports another iteration, add it
+    // to the top of this list.
+    const preferred = [
+      'COL Quote Layout New',
+      'COL Quote Layout 2 - WIP',
+    ];
+    let primary = null;
+    for (const name of preferred) {
+      primary = layouts.find(l => l.layoutName === name);
+      if (primary) break;
+    }
+    if (!primary) primary = layouts.find(l => l.isSelectedPrimary) || layouts[0];
     if (!primary) throw new Error('no layouts available');
 
     await step('setLayout', () => qwPost(jar, releasePath, 'api/DocumentDeliver/SetLayoutSelection', {
@@ -247,6 +256,7 @@ export const handler = async (event) => {
       body: JSON.stringify({
         ok: true, docNo, printPdfId,
         pdfBytes: pdfBytes.length,
+        layoutUsed: primary?.layoutName,
         to: repEmail,
         subject,
         messageId: info.messageId,
