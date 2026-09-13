@@ -476,8 +476,18 @@ async function emailRep({ rep, docId, base, apiKey }) {
   }
 
   const siteUrl = process.env.URL || process.env.DEPLOY_URL || 'https://bodyshopequipment.solutions';
+  // send-from-rep is a BACKGROUND function (file ends in -background.js). Netlify's
+  // edge/CDN has a hard 30s inactivity timeout on every HTTPS request, INCLUDING
+  // function-to-function calls within the same site. A synchronous invocation of
+  // send-from-rep therefore 504's whenever QW SendEmail takes >~28s, and the
+  // caller never learns the real result. Background functions bypass the edge
+  // cap: the invocation call itself returns 202 in a few hundred ms and the
+  // real work runs asynchronously for up to 15 min. The audit UI's success
+  // screen already says "the quote is in QuoteWerks" — email delivery status
+  // has to be polled or reported separately, which is worth the trade for
+  // reliable send on any quote size.
   try {
-    const resp = await fetch(`${siteUrl}/.netlify/functions/send-from-rep`, {
+    const resp = await fetch(`${siteUrl}/.netlify/functions/send-from-rep-background`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -485,34 +495,32 @@ async function emailRep({ rep, docId, base, apiKey }) {
         repUsername: rep,
         repEmail: to,
       }),
-      // send-from-rep runs under a 60s function timeout (per-function in
-      // netlify.toml). Give this outer fetch 58s so the caller sees the
-      // real error from the inner function instead of a premature AbortError.
-      signal: AbortSignal.timeout(58000),
+      // Background function invocation should ack in well under 5s. If Netlify
+      // itself is slow, treat as a queue failure and surface it to the caller.
+      signal: AbortSignal.timeout(10000),
     });
-    const body = await resp.json().catch(() => ({}));
-    if (resp.ok && body.ok) {
+    if (resp.status === 202) {
       return {
-        sent: true,
-        to: body.to,
-        from: body.from,
-        via: 'qw',
-        subject: body.subject,
-        attachments: body.attachments,
+        queued: true,
+        sent: false,
+        to,
+        via: 'qw-background',
         mapped: !!mapped,
         emailSource: resolved.source,
       };
     }
+    const body = await resp.json().catch(() => ({}));
     return {
+      queued: false,
       sent: false,
       to,
-      error: body.error || `http ${resp.status}`,
-      timings: body.timings,
+      error: body.error || `unexpected ack http ${resp.status}`,
       mapped: !!mapped,
       emailSource: resolved.source,
     };
   } catch (e) {
     return {
+      queued: false,
       sent: false,
       to,
       error: e?.message || String(e),

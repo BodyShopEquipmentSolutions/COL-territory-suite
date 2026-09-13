@@ -1032,11 +1032,11 @@ async function confirmCreateQuote(){
       })),
     }));
 
-  // Client timeout — the QW SendEmail path runs under a 60s function cap
-  // (Netlify sync max); give the client 70s so it doesn't abort ahead of
-  // the server, and still surface a friendly error if things go long.
+  // Client timeout — the server now creates the QW quote synchronously (fast)
+  // and queues the email as a background function (returns 202 in <1s). Total
+  // sync path is well under 10s; 30s client timeout leaves generous headroom.
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 70000);
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
   try {
     const res = await fetch('/.netlify/functions/create-qw-quote', {
       method: 'POST',
@@ -1058,7 +1058,7 @@ async function confirmCreateQuote(){
   } catch(e){
     let msg = e.message;
     if (e.name === 'AbortError') {
-      msg = 'The quote is taking longer than 70 seconds. It may still finish in QuoteWerks — check QW for a new quote by ' + escapeHtml(prettyRep(state.rep)) + ' before re-submitting to avoid a duplicate.';
+      msg = 'The quote is taking longer than 30 seconds. It may still finish in QuoteWerks — check QW for a new quote by ' + escapeHtml(prettyRep(state.rep)) + ' before re-submitting to avoid a duplicate.';
     }
     err.textContent = msg;
     err.style.display = 'block';
@@ -1078,7 +1078,9 @@ function viewSuccess(){
   const mail = r.mail || {};
   const mailNote = mail.sent
     ? `<div class="hint">Email sent to <strong>${escapeHtml(mail.to || '')}</strong>${mail.mapped ? '' : ' <span style="color:var(--warn)">(fallback inbox — rep email not yet mapped)</span>'}.</div>`
-    : `<div class="hint" style="color:var(--warn)">Email not sent${mail.reason ? ' — ' + escapeHtml(mail.reason) : ''}${mail.error ? ' — ' + escapeHtml(mail.error) : ''}. The quote is still in QuoteWerks.</div>`;
+    : mail.queued
+      ? `<div class="hint">Email queued to <strong>${escapeHtml(mail.to || '')}</strong>${mail.mapped ? '' : ' <span style="color:var(--warn)">(fallback inbox — rep email not yet mapped)</span>'} — arrives within about a minute.</div>`
+      : `<div class="hint" style="color:var(--warn)">Email not sent${mail.reason ? ' — ' + escapeHtml(mail.reason) : ''}${mail.error ? ' — ' + escapeHtml(mail.error) : ''}. The quote is still in QuoteWerks.</div>`;
   const qwUrl = r.quoteUrl || (r.docId ? ('https://na.quotewerks.com/#/documents/' + r.docId) : '');
   return `
     <div class="card" style="text-align:center;padding:32px 20px">
