@@ -350,20 +350,33 @@ function respond(statusCode, body) {
 }
 
 export const handler = async (event) => {
+  const t0 = Date.now();
+  const reqId = Math.random().toString(36).slice(2, 8);
+  const log = (...args) => console.log(`[sfr ${reqId}]`, ...args);
+
   if (event.httpMethod === 'OPTIONS') return respond(200, { ok: true });
-  if (event.httpMethod !== 'POST') return respond(405, { error: 'method not allowed' });
+  if (event.httpMethod !== 'POST') {
+    log('reject method', event.httpMethod);
+    return respond(405, { error: 'method not allowed' });
+  }
 
   let payload;
   try {
     payload = JSON.parse(event.body || '{}');
   } catch (e) {
+    log('bad JSON body:', (event.body || '').slice(0, 200));
     return respond(400, { error: 'invalid JSON body' });
   }
 
+  log('begin docRecGuid=', payload.docRecGuid, 'rep=', payload.repUsername, 'to=', payload.repEmail);
   try {
     const result = await sendQwEmailAsRep(payload);
+    log('done ok total ms=', Date.now() - t0, 'timings=', JSON.stringify(result.timings));
     return respond(200, result);
   } catch (e) {
+    log('FATAL after', Date.now() - t0, 'ms:', e && e.message);
+    log('timings:', JSON.stringify(e && e.timings));
+    log('stack:', e && e.stack);
     return respond(500, {
       error: e?.message || String(e),
       timings: e?.timings,

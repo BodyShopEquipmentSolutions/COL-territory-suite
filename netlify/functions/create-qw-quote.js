@@ -526,23 +526,36 @@ async function emailRep({ rep, docId, base, apiKey }) {
 // Netlify handler
 // ---------------------------------------------------------------------------
 export const handler = async (event) => {
+  const t0 = Date.now();
+  // Short request ID for correlation in logs when tailing this function.
+  const reqId = Math.random().toString(36).slice(2, 8);
+  const log = (...args) => console.log(`[cqw ${reqId}]`, ...args);
+
   const cors = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   };
-  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors, body: '' };
+  if (event.httpMethod === 'OPTIONS') {
+    log('OPTIONS preflight');
+    return { statusCode: 204, headers: cors, body: '' };
+  }
   if (event.httpMethod !== 'POST') {
+    log('reject method', event.httpMethod);
     return { statusCode: 405, headers: cors, body: JSON.stringify({ ok: false, error: 'Method Not Allowed' }) };
   }
 
   let payload;
   try { payload = JSON.parse(event.body || '{}'); }
-  catch { return { statusCode: 400, headers: cors, body: JSON.stringify({ ok: false, error: 'Invalid JSON' }) }; }
+  catch (e) {
+    log('bad JSON body:', (event.body || '').slice(0, 200));
+    return { statusCode: 400, headers: cors, body: JSON.stringify({ ok: false, error: 'Invalid JSON' }) };
+  }
 
   const { QW_API_KEY, QW_API_BASE } = process.env;
   const base = QW_API_BASE || QW_BASE_DEFAULT;
   if (!QW_API_KEY) {
+    log('missing QW_API_KEY env');
     return {
       statusCode: 500,
       headers: cors,
@@ -551,23 +564,45 @@ export const handler = async (event) => {
   }
 
   const action = payload.action;
+  const bodyLen = (event.body || '').length;
+  log('action=', action, 'bodyLen=', bodyLen);
   try {
     if (action === 'search_customers') {
       const results = await searchCustomers(base, QW_API_KEY, payload.query || '');
+      log('search_customers hits=', results.length, 'ms=', Date.now() - t0);
       return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true, results }) };
     }
 
     if (action === 'create_quote') {
       const { rep, customer, panels } = payload;
+      const panelSummary = Array.isArray(panels)
+        ? panels.map(p => ({
+            bundle: p?.bundle_name,
+            unit: p?.unit_number,
+            missing: Array.isArray(p?.missing) ? p.missing.length : 0,
+            damaged: Array.isArray(p?.damaged) ? p.damaged.length : 0,
+            custom: Array.isArray(p?.custom) ? p.custom.length : 0,
+          }))
+        : null;
+      log('create_quote in:',
+        'rep=', rep,
+        'customer.id=', customer && customer.id,
+        'customer.company=', customer && (customer.company || customer.customer),
+        'panels=', panelSummary);
       const { docId, docNo, diag } = await createQuote(base, QW_API_KEY, { rep, customer, panels });
+      log('createQuote done docId=', docId, 'docNo=', docNo, 'ms=', Date.now() - t0);
       const quoteUrl = `https://na.quotewerks.com/#/documents/${docId}`;
       let mail = { sent: false };
       try {
+        log('emailRep begin');
         mail = await emailRep({ rep, docId, base, apiKey: QW_API_KEY });
+        log('emailRep done sent=', mail.sent, 'error=', mail.error, 'ms=', Date.now() - t0);
       } catch (mailErr) {
         // Don't fail the whole call if email dies — the quote exists.
+        log('emailRep threw:', mailErr && mailErr.message);
         mail = { sent: false, error: mailErr.message };
       }
+      log('respond OK total ms=', Date.now() - t0);
       return {
         statusCode: 200,
         headers: cors,
@@ -595,12 +630,16 @@ export const handler = async (event) => {
       return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true, ...info }) };
     }
 
+    log('unknown action:', action);
     return {
       statusCode: 400,
       headers: cors,
       body: JSON.stringify({ ok: false, error: `Unknown action: ${action}` }),
     };
   } catch (err) {
+    // Log the full stack so we can see where it blew up, not just the message.
+    log('FATAL after', Date.now() - t0, 'ms:', err && err.message);
+    log('stack:', err && err.stack);
     return {
       statusCode: 500,
       headers: cors,
