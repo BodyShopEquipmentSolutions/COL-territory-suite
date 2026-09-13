@@ -415,14 +415,31 @@ async function createQuote(base, apiKey, { rep, customer, panels, addons }) {
     // Per-bundle section header so the printed quote clearly groups items
     // under "BenchRack 5500", "CTR9", etc. Include unit# only when the caller
     // is quoting more than one of the same bundle.
+    //
+    // QW LineType is a BITMASK: valid values are 1,2,4,8,16,32,64,128,256,512.
+    // Empirical mapping (from a test quote where we inserted one row per value):
+    //   1   = Product/Service       — full row with columns
+    //   2   = Comment               — italic gray description only
+    //   4   = SubTotal              — bold with right-aligned money
+    //   8   = RunningSubTotal       — bold with right-aligned money
+    //   16  = GroupHeader
+    //   32  = SectionHeader         — bold banner (matches band 822 alongside Heading)
+    //   64  = Heading               — bold banner (matches band 822)
+    //   128 = PercentCharge
+    //   256 = PercentDiscount
+    //   512 = Summary
+    //
+    // Bundle headers use SectionHeader (32) so the patched layout band 822 fires
+    // with our navy/bold/rich-text styling.
     const bundleName = (panel.bundle_name || '').trim();
+    const bundleStartIdx = plan.length;
     if (bundleName) {
       const sameNameCount = panels.filter(p => (p.bundle_name || '').trim() === bundleName).length;
       const headerText = sameNameCount > 1 && panel.unit_number
         ? `${bundleName} (Unit ${panel.unit_number})`
         : bundleName;
       plan.push({
-        LineType: 2, // Comment line — QW renders as a visual divider / section header
+        LineType: 32, // SectionHeader — triggers rich-text band 822
         Manufacturer: '',
         ManufacturerPartNumber: '',
         PartNumber: '',
@@ -494,6 +511,34 @@ async function createQuote(base, apiKey, { rep, customer, panels, addons }) {
         UnitPrice: prod?.price || 0,
         UnitCost:  prod?.cost  || 0,
         UnitList:  prod?.list  || prod?.price || 0,
+      });
+    }
+
+    // Per-bundle SubTotal + Comment spacer after the last line of this bundle.
+    // We compute the running sum of Product/Service rows added in this bundle
+    // and emit a SubTotal (LineType 4) row so band 1113 (SubTotal / RunningSubTotal)
+    // fires, then a blank Comment (LineType 2) row so the next bundle header has
+    // breathing room above it.
+    const bundleProductRows = plan.slice(bundleStartIdx).filter(l => l.LineType === 1);
+    if (bundleProductRows.length) {
+      const bundleSubtotal = bundleProductRows.reduce(
+        (s, l) => s + (Number(l.UnitPrice) || 0) * (Number(l.QtyBase) || 0),
+        0,
+      );
+      plan.push({
+        LineType: 4, // SubTotal
+        Manufacturer: '', ManufacturerPartNumber: '', PartNumber: '',
+        Description: bundleName ? `${bundleName} Subtotal` : 'Subtotal',
+        QtyBase: 0,
+        UnitPrice: bundleSubtotal,
+        ExtendedPrice: bundleSubtotal,
+        UnitCost: 0, UnitList: 0,
+      });
+      plan.push({
+        LineType: 2, // Comment spacer
+        Manufacturer: '', ManufacturerPartNumber: '', PartNumber: '',
+        Description: ' ',
+        QtyBase: 0, UnitPrice: 0, UnitCost: 0, UnitList: 0,
       });
     }
   }
