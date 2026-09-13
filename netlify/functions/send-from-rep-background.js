@@ -186,7 +186,7 @@ async function qwPost(jar, releasePath, apiPath, payload, fetchTimeoutMs = 60000
   return json;
 }
 
-async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride, fromOverride, fromDisplayName }) {
+export async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride, fromOverride, fromDisplayName }) {
   // Per-step timing so a stall in one QW call is diagnosable from the response.
   const timings = [];
   const step = async (name, fn, timeoutMs = 20000) => {
