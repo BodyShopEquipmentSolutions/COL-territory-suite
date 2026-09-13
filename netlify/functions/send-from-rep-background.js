@@ -23,6 +23,8 @@
 // Rep email map fallback lives in create-qw-quote.js REP_EMAIL_MAP; this function
 // takes repEmail directly to avoid duplicating that map.
 
+console.log('[sfr] MODULE LOAD send-from-rep-background.js', new Date().toISOString());
+
 const QW_HOST = process.env.QW_HOST || 'na.quotewerks.com';
 const QW_TENANT = process.env.QW_TENANT || 'caroliner002';
 // QW rotates the /rXXX/ path on their server upgrades. Default is the current one
@@ -349,10 +351,19 @@ function respond(statusCode, body) {
   };
 }
 
-export const handler = async (event) => {
+export const handler = async (event, context) => {
   const t0 = Date.now();
   const reqId = Math.random().toString(36).slice(2, 8);
   const log = (...args) => console.log(`[sfr ${reqId}]`, ...args);
+
+  // BACKGROUND FUNCTION: Netlify returns 202 to the caller immediately and
+  // runs this handler asynchronously (no HTTP response is sent back to the
+  // caller). Return value is ignored. Log EVERYTHING here for CLI debugging.
+  try {
+    log('ENTER background handler; method=', event?.httpMethod, 'bodyLen=', (event?.body || '').length, 'hasContext=', !!context);
+  } catch (e) {
+    console.log('[sfr] ENTER log failed:', e?.message);
+  }
 
   if (event.httpMethod === 'OPTIONS') return respond(200, { ok: true });
   if (event.httpMethod !== 'POST') {
