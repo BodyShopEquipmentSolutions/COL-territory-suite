@@ -56,15 +56,12 @@ export const handler = async (event) => {
       try {
         const b = await fetch(url, { headers:{ cookie } });
         const txt = await b.text();
-        // Grep for api/... paths that mention attachment/pdf/download
-        const re = /['"`](api\/[\w/.\-]*(?:[Aa]ttachment|[Pp]df|PDF|[Dd]ownload|[Pp]rintPdf)[\w/.\-]*)['"`]/g;
-        let m; while ((m = re.exec(txt))) allMatches.add(m[1]);
-        // Also lines containing 'attachmentId' or 'printPdfId' as substrings
-        for (const kw of ['attachmentId','printPdfId','GetAttachment','DownloadAttachment','ViewAttachment','OpenAttachment','FetchAttachment','LoadAttachment']) {
-          if (txt.includes(kw)) {
-            // Grab a 120-char window
-            const idx = txt.indexOf(kw);
-            allMatches.add(`${kw}::${txt.slice(Math.max(0,idx-60), idx+80)}`);
+        for (const kw of ['generatePrintPdfUrl','pdfUrl','GetPrintPdf','openPdf','viewPdf','printPreviewService','downloadUrl','printPdfDownload']) {
+          let idx = 0;
+          while ((idx = txt.indexOf(kw, idx)) !== -1) {
+            allMatches.add(`${kw}::${txt.slice(Math.max(0,idx-40), idx+240).replace(/[\r\n]+/g,' ⏎ ')}`);
+            idx += kw.length;
+            if (allMatches.size > 200) break;
           }
         }
         bundles.push({ url, len: txt.length });
