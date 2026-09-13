@@ -767,6 +767,22 @@ export const handler = async (event) => {
       return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true, ...info }) };
     }
 
+    if (action === 'inspect_header') {
+      // Diagnostic: dump every attribute on a DocumentHeaders row so we can
+      // verify what QW is storing after a create.
+      const docId = payload.docId;
+      if (!docId) return { statusCode: 400, headers: cors, body: JSON.stringify({ ok:false, error:'docId required'}) };
+      const data = await qwFetch(base, QW_API_KEY, `/api/v1/qw/tables/DocumentHeaders/${encodeURIComponent(docId)}`);
+      const attrs = data && data.data && data.data.attributes || {};
+      const shipTo = {}, soldTo = {}, tax = {};
+      for (const [k,v] of Object.entries(attrs)) {
+        if (k.startsWith('ShipTo')) shipTo[k] = v;
+        else if (k.startsWith('SoldTo')) soldTo[k] = v;
+        else if (/tax/i.test(k) || k === 'TaxZone' || k === 'TaxSystem') tax[k] = v;
+      }
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok:true, docNo: attrs.DocNo, shipTo, soldTo, tax }) };
+    }
+
     log('unknown action:', action);
     return {
       statusCode: 400,
