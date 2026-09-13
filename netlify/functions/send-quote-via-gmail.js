@@ -257,6 +257,7 @@ export const handler = async (event) => {
         ok: true, docNo, printPdfId,
         pdfBytes: pdfBytes.length,
         layoutUsed: primary?.layoutName,
+        layoutsAvailable: layouts.map(l => l.layoutName),
         to: repEmail,
         subject,
         messageId: info.messageId,
