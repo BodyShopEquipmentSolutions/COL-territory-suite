@@ -354,16 +354,23 @@ function respond(statusCode, body) {
 export const handler = async (event, context) => {
   const t0 = Date.now();
   const reqId = Math.random().toString(36).slice(2, 8);
-  const log = (...args) => console.log(`[sfr ${reqId}]`, ...args);
+  const logMsgs = [];
+  const log = (...args) => {
+    const msg = args.map(a => typeof a === 'string' ? a : (() => { try { return JSON.stringify(a); } catch { return String(a); } })()).join(' ');
+    console.log(`[sfr ${reqId}]`, msg);
+    logMsgs.push(`${(Date.now()-t0)}ms ${msg}`);
+  };
+  const finish = async (result) => {
+    // Flush all captured logs to proof-sink-v1 (sync fn whose logs ARE visible)
+    await beacon(reqId, `EXIT total=${Date.now()-t0}ms | ${logMsgs.slice(-25).join(' | ').slice(0, 3500)}`);
+    return result;
+  };
 
   // BACKGROUND FUNCTION: Netlify returns 202 to the caller immediately and
   // runs this handler asynchronously (no HTTP response is sent back to the
-  // caller). Return value is ignored. Log EVERYTHING here for CLI debugging.
-  try {
-    log('ENTER background handler; method=', event?.httpMethod, 'bodyLen=', (event?.body || '').length, 'hasContext=', !!context);
-  } catch (e) {
-    console.log('[sfr] ENTER log failed:', e?.message);
-  }
+  // caller). Return value is ignored.
+  await beacon(reqId, `ENTER method=${event?.httpMethod} bodyLen=${(event?.body || '').length}`);
+  log('ENTER method=', event?.httpMethod, 'bodyLen=', (event?.body || '').length);
 
   if (event.httpMethod === 'OPTIONS') return respond(200, { ok: true });
   if (event.httpMethod !== 'POST') {
@@ -383,14 +390,14 @@ export const handler = async (event, context) => {
   try {
     const result = await sendQwEmailAsRep(payload);
     log('done ok total ms=', Date.now() - t0, 'timings=', JSON.stringify(result.timings));
-    return respond(200, result);
+    return await finish(respond(200, result));
   } catch (e) {
     log('FATAL after', Date.now() - t0, 'ms:', e && e.message);
     log('timings:', JSON.stringify(e && e.timings));
-    log('stack:', e && e.stack);
-    return respond(500, {
+    log('stack:', (e && e.stack || '').slice(0, 1500));
+    return await finish(respond(500, {
       error: e?.message || String(e),
       timings: e?.timings,
-    });
+    }));
   }
 };
