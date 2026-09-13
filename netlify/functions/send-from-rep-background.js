@@ -381,7 +381,12 @@ export const handler = async (event, context) => {
   };
   const finish = async (result) => {
     // Flush all captured logs to proof-sink-v1 (sync fn whose logs ARE visible)
-    await beacon(reqId, `EXIT total=${Date.now()-t0}ms | ${logMsgs.slice(-25).join(' | ').slice(0, 3500)}`);
+    // Beacon in chunks so long messages aren't truncated by log line limits.
+    const full = `EXIT total=${Date.now()-t0}ms | ${logMsgs.join(' | ')}`;
+    const CHUNK = 3000;
+    for (let i = 0; i < full.length; i += CHUNK) {
+      await beacon(reqId, `part${Math.floor(i/CHUNK)}/${Math.ceil(full.length/CHUNK)}: ${full.slice(i, i+CHUNK)}`);
+    }
     return result;
   };
 
@@ -409,6 +414,8 @@ export const handler = async (event, context) => {
   try {
     const result = await sendQwEmailAsRep(payload);
     log('done ok total ms=', Date.now() - t0, 'timings=', JSON.stringify(result.timings));
+    log('sendResponse=', JSON.stringify(result.sendResponse));
+    log('to=', JSON.stringify(result.to), 'from=', JSON.stringify(result.from), 'subj=', JSON.stringify(result.subject));
     return await finish(respond(200, result));
   } catch (e) {
     log('FATAL after', Date.now() - t0, 'ms:', e && e.message);
