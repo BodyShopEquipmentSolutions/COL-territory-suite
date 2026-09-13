@@ -186,6 +186,84 @@ async function qwPost(jar, releasePath, apiPath, payload, fetchTimeoutMs = 60000
   return json;
 }
 
+// Try to download the actual PDF bytes for an attachment id (from the composer).
+// Probes a handful of candidate QW endpoints and reports the first that returns
+// bytes shaped like a PDF (starts with '%PDF-').
+export async function probeAttachmentDownload({ docRecGuid, repUsername, attachmentId }) {
+  const envKey = (repUsername || 'ryan.harthcock').replace(/[.\-]/g, '_');
+  const qwUsername = process.env[`QW_USERNAME_${envKey}`] || process.env.QW_USERNAME_ryan_harthcock || process.env.QW_USERNAME;
+  const qwPassword = process.env[`QW_PASSWORD_${envKey}`] || process.env.QW_PASSWORD_ryan_harthcock || process.env.QW_PASSWORD;
+  const jar = await loginQw({ tenant: QW_TENANT, username: qwUsername, password: qwPassword });
+  const releasePath = await discoverReleasePath(jar);
+  // Re-run deliver+SetLayout+PDF gen so a fresh PDF exists in the server-side session.
+  const deliverInit = await qwPost(jar, releasePath, 'api/DocumentDeliver/GetDocumentDeliverInitData', { docRecGuid, isAdministrationMode: false });
+  const layouts = deliverInit?.newLayouts || [];
+  const primary = layouts.find(l => l.isSelectedPrimary) || layouts.find(l => l.layoutName === 'COL Quote Layout 2 - WIP') || layouts[0];
+  await qwPost(jar, releasePath, 'api/DocumentDeliver/SetLayoutSelection', {
+    layoutIdentifier: primary.file, layoutIsSelected: true, isPrimaryLayout: true,
+    layoutType: primary.layoutType, layoutDisplayText: primary.layoutName, fileType: primary.fileType,
+  });
+  await qwPost(jar, releasePath, 'api/DocumentDeliver/GeneratePrintPdf', {
+    coverPageMessage: '', qwPrintMethod: 5, createPOforEachVendor: null, makePDFReadOnly: null,
+  });
+  const composer = await qwPost(jar, releasePath, 'api/Email/GetEmailComposerInitData', {
+    emailContext: 'EmailQuote', docRecGuid, coverPageMessage: '', templateGuid: '',
+    createPOforEachVendor: false, linkedResources: [],
+    primaryLayoutFilterModel: 'QUOTE', poRecGuid: '', layoutOverride: '', poSetDefaultLayout: false,
+  });
+  const emailAttachment = composer?.emailInitData?.[0]?.email?.attachments?.[0];
+  const attId = attachmentId || emailAttachment?.id;
+  if (!attId) return { error: 'no attachment id', composer };
+
+  const candidates = [
+    // JSON:API-style
+    { url: `api/Email/GetEmailAttachment?attachmentId=${encodeURIComponent(attId)}`, m:'GET' },
+    { url: `api/Email/GetAttachment?attachmentId=${encodeURIComponent(attId)}`, m:'GET' },
+    { url: `api/Email/GetAttachment/${encodeURIComponent(attId)}`, m:'GET' },
+    { url: `api/Email/DownloadAttachment?attachmentId=${encodeURIComponent(attId)}`, m:'GET' },
+    { url: `api/Email/DownloadEmailAttachment?attachmentId=${encodeURIComponent(attId)}`, m:'GET' },
+    { url: `api/DocumentDeliver/GetPrintPdf?printPdfId=${encodeURIComponent(attId)}`, m:'GET' },
+    { url: `api/DocumentDeliver/DownloadPdf?printPdfId=${encodeURIComponent(attId)}`, m:'GET' },
+    { url: `api/DocumentDeliver/GetPdf?printPdfId=${encodeURIComponent(attId)}`, m:'GET' },
+    // POST-style with body
+    { url: `api/Email/GetEmailAttachment`, m:'POST', body:{ attachmentId: attId } },
+    { url: `api/Email/GetAttachment`, m:'POST', body:{ attachmentId: attId } },
+    { url: `api/Email/DownloadAttachment`, m:'POST', body:{ attachmentId: attId } },
+  ];
+
+  const results = [];
+  for (const c of candidates) {
+    try {
+      const url = `https://${QW_HOST}${releasePath}${c.url}`;
+      const resp = await fetch(url, {
+        method: c.m,
+        headers: {
+          cookie: jar.header(),
+          accept: 'application/pdf, application/json, */*',
+          ...(c.body ? { 'content-type': 'application/json;charset=UTF-8' } : {}),
+          origin: `https://${QW_HOST}`,
+          referer: `https://${QW_HOST}${releasePath}`,
+        },
+        body: c.body ? JSON.stringify(c.body) : undefined,
+        signal: AbortSignal.timeout(15000),
+      });
+      const ct = resp.headers.get('content-type') || '';
+      const cl = resp.headers.get('content-length') || '';
+      // Peek first few bytes to detect a real PDF
+      const buf = await resp.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      const head5 = Array.from(bytes.slice(0, 5)).map(b => String.fromCharCode(b)).join('');
+      const isPdf = head5 === '%PDF-';
+      const info = { url: c.url, method: c.m, status: resp.status, ct, cl, len: bytes.length, head5, isPdf };
+      results.push(info);
+      if (isPdf) return { attId, hit: info };
+    } catch (e) {
+      results.push({ url: c.url, method: c.m, error: e.message });
+    }
+  }
+  return { attId, hit: null, tried: results };
+}
+
 // Diagnostic: run through login → deliver → SetLayout → GeneratePrintPdf →
 // GetEmailComposerInitData and return the raw attachment objects (all keys) plus
 // the raw GeneratePrintPdf response so we can see what fields QW gives us for
