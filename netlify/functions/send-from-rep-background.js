@@ -186,6 +186,19 @@ async function qwPost(jar, releasePath, apiPath, payload, fetchTimeoutMs = 60000
   return json;
 }
 
+// Get the applicationInstanceIdentity (needed for PrintPreviewPdf).
+async function getAii(jar, releasePath) {
+  const url = `https://${QW_HOST}${releasePath}api/ApplicationInstanceIdentity/get`;
+  const r = await fetch(url, { method:'POST', headers:{
+    cookie: jar.header(),
+    accept:'application/json,text/plain,*/*',
+    'content-type':'application/json;charset=UTF-8',
+    origin:`https://${QW_HOST}`, referer:`https://${QW_HOST}${releasePath}`,
+  }, body: '{}', signal: AbortSignal.timeout(10000) });
+  const txt = await r.text();
+  return { status: r.status, body: txt.slice(0,300) };
+}
+
 // Try to download the actual PDF bytes for an attachment id (from the composer).
 // Probes a handful of candidate QW endpoints and reports the first that returns
 // bytes shaped like a PDF (starts with '%PDF-').
@@ -215,6 +228,13 @@ export async function probeAttachmentDownload({ docRecGuid, repUsername, attachm
   const attId = attachmentId || emailAttachment?.id;
   if (!attId) return { error: 'no attachment id', composer };
 
+  // Regenerate PDF to get its printPdfId (composer may return dummy zeros)
+  const pdfResp2 = await qwPost(jar, releasePath, 'api/DocumentDeliver/GeneratePrintPdf', {
+    coverPageMessage:'', qwPrintMethod: 5, createPOforEachVendor: null, makePDFReadOnly: null,
+  });
+  const printPdfId = pdfResp2?.pdfList?.[0]?.printPdfId;
+  const aiiResp = await getAii(jar, releasePath).catch(()=>null);
+
   const candidates = [
     // JSON:API-style
     { url: `api/Email/GetEmailAttachment?attachmentId=${encodeURIComponent(attId)}`, m:'GET' },
@@ -229,6 +249,9 @@ export async function probeAttachmentDownload({ docRecGuid, repUsername, attachm
     { url: `api/Email/GetEmailAttachment`, m:'POST', body:{ attachmentId: attId } },
     { url: `api/Email/GetAttachment`, m:'POST', body:{ attachmentId: attId } },
     { url: `api/Email/DownloadAttachment`, m:'POST', body:{ attachmentId: attId } },
+    // The winning candidate discovered from JS bundle grep
+    { url: `PrintPreviewPdf?id=${encodeURIComponent(printPdfId || attId)}&inline=true`, m:'GET', note:'PrintPreviewPdf-nopath-noaii' },
+    { url: `PrintPreviewPdf?id=${encodeURIComponent(attId)}&inline=true`, m:'GET', note:'PrintPreviewPdf-attId-noaii' },
   ];
 
   const results = [];
@@ -261,7 +284,7 @@ export async function probeAttachmentDownload({ docRecGuid, repUsername, attachm
       results.push({ url: c.url, method: c.m, error: e.message });
     }
   }
-  return { attId, hit: null, tried: results };
+  return { attId, printPdfId, aiiResp, hit: null, tried: results };
 }
 
 // Diagnostic: run through login → deliver → SetLayout → GeneratePrintPdf →
