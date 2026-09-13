@@ -186,6 +186,46 @@ async function qwPost(jar, releasePath, apiPath, payload, fetchTimeoutMs = 60000
   return json;
 }
 
+// Diagnostic: run through login → deliver → SetLayout → GeneratePrintPdf →
+// GetEmailComposerInitData and return the raw attachment objects (all keys) plus
+// the raw GeneratePrintPdf response so we can see what fields QW gives us for
+// downloading the PDF ourselves.
+export async function dumpComposerAttachments({ docRecGuid, repUsername }) {
+  const envKey = (repUsername || 'ryan.harthcock').replace(/[.\-]/g, '_');
+  const qwUsername = process.env[`QW_USERNAME_${envKey}`] || process.env.QW_USERNAME_ryan_harthcock || process.env.QW_USERNAME;
+  const qwPassword = process.env[`QW_PASSWORD_${envKey}`] || process.env.QW_PASSWORD_ryan_harthcock || process.env.QW_PASSWORD;
+  if (!qwUsername || !qwPassword) throw new Error('No QW credentials available');
+  const jar = await loginQw({ tenant: QW_TENANT, username: qwUsername, password: qwPassword });
+  const releasePath = await discoverReleasePath(jar);
+  const deliverInit = await qwPost(jar, releasePath, 'api/DocumentDeliver/GetDocumentDeliverInitData', { docRecGuid, isAdministrationMode: false });
+  const layouts = deliverInit?.newLayouts || [];
+  const primary = layouts.find(l => l.isSelectedPrimary) || layouts.find(l => l.layoutName === 'COL Quote Layout 2 - WIP') || layouts[0];
+  if (!primary) throw new Error('no layout');
+  await qwPost(jar, releasePath, 'api/DocumentDeliver/SetLayoutSelection', {
+    layoutIdentifier: primary.file, layoutIsSelected: true, isPrimaryLayout: true,
+    layoutType: primary.layoutType, layoutDisplayText: primary.layoutName, fileType: primary.fileType,
+  });
+  const pdfResp = await qwPost(jar, releasePath, 'api/DocumentDeliver/GeneratePrintPdf', {
+    coverPageMessage: '', qwPrintMethod: 5, createPOforEachVendor: null, makePDFReadOnly: null,
+  });
+  const composer = await qwPost(jar, releasePath, 'api/Email/GetEmailComposerInitData', {
+    emailContext: 'EmailQuote', docRecGuid, coverPageMessage: '', templateGuid: '',
+    createPOforEachVendor: false, linkedResources: [],
+    primaryLayoutFilterModel: 'QUOTE', poRecGuid: '', layoutOverride: '', poSetDefaultLayout: false,
+  });
+  const email = composer?.emailInitData?.[0]?.email;
+  return {
+    releasePath,
+    layoutName: primary.layoutName,
+    pdfResp,
+    emailFromComposer: {
+      from: email?.from, to: email?.to, subject: email?.subject,
+      bodyLen: (email?.body || '').length,
+      attachments: email?.attachments || [],
+    },
+  };
+}
+
 export async function sendQwEmailAsRep({ docRecGuid, repUsername, repEmail, toOverride, fromOverride, fromDisplayName }) {
   // Per-step timing so a stall in one QW call is diagnosable from the response.
   const timings = [];

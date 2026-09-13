@@ -5,7 +5,7 @@
 //
 // POST body: { docRecGuid, repUsername, repEmail }
 
-import { sendQwEmailAsRep } from './send-from-rep-background.js';
+import { sendQwEmailAsRep, dumpComposerAttachments } from './send-from-rep-background.js';
 
 export const handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
@@ -20,6 +20,10 @@ export const handler = async (event) => {
 
   const t0 = Date.now();
   try {
+    if (payload.mode === 'dump_attachment') {
+      const dump = await dumpComposerAttachments(payload);
+      return { statusCode: 200, headers: cors(), body: JSON.stringify({ ok:true, ...dump }) };
+    }
     const r = await sendQwEmailAsRep(payload);
     return {
       statusCode: 200,
