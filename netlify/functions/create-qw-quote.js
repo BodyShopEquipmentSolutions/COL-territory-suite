@@ -528,7 +528,7 @@ async function createQuote(base, apiKey, { rep, customer, panels, addons }) {
       plan.push({
         LineType: 4, // SubTotal
         Manufacturer: '', ManufacturerPartNumber: '', PartNumber: '',
-        Description: bundleName ? `${bundleName} Subtotal` : 'Subtotal',
+        Description: 'Subtotal',
         QtyBase: 0,
         UnitPrice: bundleSubtotal,
         ExtendedPrice: bundleSubtotal,
