@@ -709,7 +709,10 @@ function viewAudit(){
     </div>
     <div class="panel-nav">${tabs}</div>
     <div class="card">
-      <h2 style="margin:0 0 4px;font-size:18px">${escapeHtml(p.bundle_name)} — Unit #${p.unit_number}</h2>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:4px">
+        <h2 style="margin:0;font-size:18px">${escapeHtml(p.bundle_name)} — Unit #${p.unit_number}</h2>
+        <button class="btn" style="background:var(--warn);min-height:36px;padding:8px 12px;font-size:13px;flex-shrink:0" onclick="orderAllInPanel()" title="Mark every item in this bundle as Order">Order all</button>
+      </div>
       <p class="hint" style="margin-top:0">${stats.itemCount} items · ${stats.expandedCount} with sub-parts · ${stats.auditPoints} audit points total</p>
       <div class="audit-tree">${items}</div>
       ${customs ? `<h3 style="margin:14px 0 6px;font-size:14px;color:#92400e">Custom parts added</h3><ul class="custom-list">${customs}</ul>` : ''}
@@ -854,6 +857,18 @@ function setItemStatus(idx, s){
   const it = p.items[idx];
   it.status = s;
   if (s === 'order'){ if (!it.qty) it.qty = 1; }
+  render();
+}
+function orderAllInPanel(){
+  // Bundle-level shortcut: flip every audit item in the active panel to
+  // status='order' with a sensible qty. Preserves any per-item qty the rep
+  // already set; falls back to qtyNeeded, then 1.
+  const p = state.panels[state.activePanel];
+  if (!p || !p.items) return;
+  p.items.forEach(it => {
+    it.status = 'order';
+    if (!it.qty || it.qty < 1) it.qty = Number(it.qtyNeeded) || 1;
+  });
   render();
 }
 function stepItemQty(idx, delta){
