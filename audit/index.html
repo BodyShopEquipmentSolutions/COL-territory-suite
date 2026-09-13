@@ -111,6 +111,23 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--brand-2)
 .audit-item .head{display:flex;gap:10px;align-items:flex-start}
 .audit-item .thumb, .audit-parent .thumb{flex:0 0 56px;width:56px;height:56px;border-radius:6px;background:#fff;border:1px solid var(--line);object-fit:contain;cursor:zoom-in;padding:2px}
 .audit-parent .thumb{width:44px;height:44px;flex-basis:44px}
+/* Camera capture placeholder - shown in place of a thumb when no photo exists */
+.thumb-cam{flex:0 0 56px;width:56px;height:56px;border-radius:6px;background:#f0f6ff;border:2px dashed var(--brand-2);color:var(--brand);font-size:24px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
+.audit-parent .thumb-cam{width:44px;height:44px;flex-basis:44px;font-size:20px}
+.thumb-cam:hover{background:#e0edff}
+/* Small camera button shown next to an existing thumb for photo replacement */
+.cam-btn{flex:0 0 32px;width:32px;height:32px;border-radius:16px;background:#fff;border:1px solid var(--line);color:var(--brand);font-size:14px;cursor:pointer;padding:0;margin-left:auto;align-self:flex-start}
+.cam-btn:hover{background:#f0f6ff;border-color:var(--brand-2)}
+/* Photo-capture modal */
+.photo-modal{position:fixed;inset:0;background:rgba(15,23,42,.85);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
+.photo-modal .box{background:#fff;border-radius:12px;max-width:480px;width:100%;padding:16px;max-height:90vh;overflow-y:auto}
+.photo-modal h3{margin:0 0 4px;font-size:16px}
+.photo-modal .sub{color:var(--muted);font-size:13px;margin-bottom:12px}
+.photo-modal .preview{width:100%;max-height:50vh;object-fit:contain;background:#f8fafc;border:1px solid var(--line);border-radius:8px;margin-bottom:12px;display:none}
+.photo-modal .preview.on{display:block}
+.photo-modal .row{display:flex;gap:8px;flex-wrap:wrap}
+.photo-modal .row .btn{flex:1;min-width:120px}
+.photo-modal input[type=file]{display:none}
 .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px;cursor:zoom-out}
 .lightbox img{max-width:100%;max-height:100%;border-radius:8px;background:#fff}
 .lightbox .close{position:absolute;top:12px;right:16px;color:#fff;background:transparent;border:0;font-size:32px;cursor:pointer;line-height:1}
@@ -254,7 +271,14 @@ const ROLE_QUEUES = ['<Outside Sales>','<Inside Sales>'];
 
 const LS_REP = 'col_audit_rep';
 const IMG_BASE = 'https://cdn3.gung.io/caroliner/images/';
-function imgUrl(rel){ if(!rel) return ''; return /^https?:/i.test(rel) ? rel : (IMG_BASE + rel.replace(/^\/+/,'')); }
+function imgUrl(rel){ if(!rel) return ''; return /^https?:/i.test(rel) || rel.startsWith('/') ? rel : (IMG_BASE + rel.replace(/^\/+/,'')); }
+// Return the best photo URL for a part: rep-uploaded (Netlify Blob) if any,
+// else the Gung catalog image, else empty string.
+function photoFor(partNumber, catalogImg){
+  if (partNumber && PART_PHOTOS[partNumber]) return PART_PHOTOS[partNumber];
+  if (catalogImg) return imgUrl(catalogImg);
+  return '';
+}
 
 let BUNDLES = {};        // { bundleName: {name, items:[...], bundle_rec_guid} }
 let BUNDLE_NAMES = [];   // ordered
@@ -317,19 +341,27 @@ const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
 // ============================================================================
 window.addEventListener('load', init);
 
+// Rep-uploaded photos, keyed by part number. Overlaid on top of the Gung CDN
+// images so a captured photo wins over the (often missing) catalog one.
+let PART_PHOTOS = {};
+
 async function init(){
   try{
-    const [bRes, cRes, aRes, pRes] = await Promise.all([
+    const [bRes, cRes, aRes, pRes, phRes] = await Promise.all([
       fetch('bundles_enriched.json'),
       fetch('../data/contacts.json').catch(()=>null),
       fetch('assemblies.json').catch(()=>null),
       fetch('parts_index.json').catch(()=>null),
+      fetch('/.netlify/functions/list-part-photos').catch(()=>null),
     ]);
     BUNDLES = await bRes.json();
     BUNDLE_NAMES = Object.keys(BUNDLES);
     if (cRes && cRes.ok) CONTACTS = await cRes.json();
     if (aRes && aRes.ok) ASSEMBLIES = await aRes.json();
     if (pRes && pRes.ok) PARTS = await pRes.json();
+    if (phRes && phRes.ok) {
+      try { PART_PHOTOS = (await phRes.json()).photos || {}; } catch(e){}
+    }
 
     // Remember rep across sessions
     try { const r = localStorage.getItem(LS_REP); if (r) state.rep = r; } catch(e){}
@@ -742,7 +774,9 @@ function renderAuditNode(node, panel, depth){
     <div class="audit-branch depth-${depth}">
       <button class="audit-parent ${rollClass}" aria-expanded="${open}" onclick="toggleTree('${escapeHtml(node.path)}')">
         <span class="caret" aria-hidden="true">▸</span>
-        ${node.img ? `<img class="thumb" src="${escapeHtml(imgUrl(node.img))}" alt="" onerror="this.style.display='none'" onclick="event.stopPropagation();showLightbox('${escapeHtml(imgUrl(node.img))}')">` : ''}
+        ${(() => { const ph = photoFor(node.partNumber, node.img); return ph
+          ? `<img class="thumb" src="${escapeHtml(ph)}" alt="" onerror="this.style.display='none'" onclick="event.stopPropagation();showLightbox('${escapeHtml(ph)}')">`
+          : `<span class="thumb-cam" onclick="event.stopPropagation();openPhotoCapture('${escapeHtml(node.partNumber)}','${escapeHtml((node.description||'').replace(/'/g,"\\'"))}')" title="Take photo">📷</span>`; })()}
         <div class="info"><div class="pn">${escapeHtml(node.partNumber)}</div><div class="desc">${escapeHtml(node.description)}</div><div class="subparts">${descendants} sub-part${descendants===1?'':'s'}${rollLabel ? ` · <span class="roll-badge">${rollLabel}</span>` : ''}</div></div>
       </button>
       <div class="parent-status-row">
@@ -789,9 +823,13 @@ function renderAuditItem(it, idx, depth=0){
   const notesOpen = !!it.note || it._noteOpen;
   const needsQty = it.status === 'order';
   const needed = it.qtyNeeded && it.qtyNeeded !== 1 ? `<div class="required-qty">Qty needed: ${escapeHtml(it.qtyNeeded)}</div>` : '';
+  const photo = photoFor(it.partNumber, it.img);
+  const hasCustom = !!(it.partNumber && PART_PHOTOS[it.partNumber]);
   return `
     <div class="audit-item" data-idx="${idx}" data-audit-key="${escapeHtml(it.auditKey || it.partNumber)}" style="${depth ? 'margin-left:0' : ''}">
-      <div class="head">${it.img ? `<img class="thumb" src="${escapeHtml(imgUrl(it.img))}" alt="" onerror="this.style.display='none'" onclick="showLightbox('${escapeHtml(imgUrl(it.img))}')">` : ''}<div class="info"><div class="pn">${escapeHtml(it.partNumber)}</div><div class="desc">${escapeHtml(it.description)}</div>${needed}</div></div>
+      <div class="head">${photo
+          ? `<img class="thumb" src="${escapeHtml(photo)}" alt="" onerror="this.style.display='none'" onclick="showLightbox('${escapeHtml(photo)}')">`
+          : `<button class="thumb-cam" onclick="openPhotoCapture('${escapeHtml(it.partNumber)}','${escapeHtml((it.description||'').replace(/'/g,"\\'"))}')" title="Take photo">📷</button>`}<div class="info"><div class="pn">${escapeHtml(it.partNumber)}</div><div class="desc">${escapeHtml(it.description)}</div>${needed}</div>${photo ? `<button class="cam-btn" onclick="openPhotoCapture('${escapeHtml(it.partNumber)}','${escapeHtml((it.description||'').replace(/'/g,"\\'"))}')" title="${hasCustom ? 'Replace photo' : 'Add photo'}">📷</button>` : ''}</div>
       <div class="status-row">
         <button class="status-btn ${it.status==='present'?'on-present':''}" onclick="setItemStatus(${idx},'present')">Present</button>
         <button class="status-btn ${it.status==='order'?'on-order':''}" onclick="setItemStatus(${idx},'order')">Order</button>
@@ -806,6 +844,75 @@ function showLightbox(url){
   box.innerHTML = `<button class="close" aria-label="Close">&times;</button><img src="${url}" alt="">`;
   box.addEventListener('click', () => box.remove());
   document.body.appendChild(box);
+}
+
+// ============================================================================
+// On-site photo capture: rep taps camera icon on a part with no photo (or the
+// small overlay icon to replace an existing one). Opens phone camera via
+// <input capture=environment>, previews, uploads to Netlify Blobs, then
+// updates PART_PHOTOS and re-renders so the new image is used immediately.
+// ============================================================================
+function openPhotoCapture(partNumber, description){
+  if (!partNumber){ alert('Missing part number'); return; }
+  const modal = document.createElement('div');
+  modal.className = 'photo-modal';
+  modal.innerHTML = `
+    <div class="box">
+      <h3>Add photo</h3>
+      <div class="sub"><strong>${escapeHtml(partNumber)}</strong>${description ? ' — ' + escapeHtml(description) : ''}</div>
+      <img class="preview" alt="preview">
+      <input type="file" accept="image/*" capture="environment">
+      <div class="row">
+        <button class="btn take">📷 Take photo</button>
+        <button class="btn sec pick">Choose from library</button>
+      </div>
+      <div class="row" style="margin-top:8px;display:none" data-role="confirm">
+        <button class="btn save">Save</button>
+        <button class="btn sec retake">Retake</button>
+      </div>
+      <div class="row" style="margin-top:8px"><button class="btn sec cancel" style="flex:1">Cancel</button></div>
+      <div class="sub" data-role="status" style="margin-top:8px"></div>
+    </div>`;
+  document.body.appendChild(modal);
+  const input = modal.querySelector('input[type=file]');
+  const preview = modal.querySelector('.preview');
+  const confirmRow = modal.querySelector('[data-role=confirm]');
+  const status = modal.querySelector('[data-role=status]');
+  let chosen = null;
+
+  modal.querySelector('.cancel').onclick = () => modal.remove();
+  modal.querySelector('.take').onclick = () => { input.setAttribute('capture','environment'); input.click(); };
+  modal.querySelector('.pick').onclick = () => { input.removeAttribute('capture'); input.click(); };
+  modal.querySelector('.retake').onclick = () => {
+    chosen = null; preview.classList.remove('on'); preview.src=''; confirmRow.style.display='none'; status.textContent='';
+  };
+  input.onchange = () => {
+    const f = input.files && input.files[0];
+    if (!f) return;
+    chosen = f;
+    preview.src = URL.createObjectURL(f);
+    preview.classList.add('on');
+    confirmRow.style.display = 'flex';
+    status.textContent = `${(f.size/1024/1024).toFixed(2)} MB · ${f.type || 'image'}`;
+  };
+  modal.querySelector('.save').onclick = async () => {
+    if (!chosen){ status.textContent = 'No photo selected'; return; }
+    status.textContent = 'Uploading…';
+    const fd = new FormData();
+    fd.append('partNumber', partNumber);
+    fd.append('file', chosen, chosen.name || 'photo.jpg');
+    try {
+      const res = await fetch('/.netlify/functions/save-part-photo', { method:'POST', body: fd });
+      const j = await res.json();
+      if (!res.ok || !j.ok) throw new Error(j.error || `HTTP ${res.status}`);
+      PART_PHOTOS[partNumber] = j.url;
+      status.textContent = 'Saved.';
+      modal.remove();
+      render();
+    } catch(err){
+      status.textContent = 'Upload failed: ' + err.message;
+    }
+  };
 }
 function toggleTree(path){
   const panel = state.panels[state.activePanel];
