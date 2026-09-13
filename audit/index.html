@@ -860,14 +860,25 @@ function setItemStatus(idx, s){
   render();
 }
 function orderAllInPanel(){
-  // Bundle-level shortcut: flip every audit item in the active panel to
-  // status='order' with a sensible qty. Preserves any per-item qty the rep
-  // already set; falls back to qtyNeeded, then 1.
+  // Bundle-level shortcut: for every TOP-LAYER node in this panel,
+  // order it as a single line - NOT each individual sub-part.
+  //  - Top-layer branch (parent w/ children): mark its leaves
+  //    wholeAssembly=true so they consolidate to one parent line on the quote.
+  //  - Top-layer leaf (audit item at the root): just flip its status to order.
   const p = state.panels[state.activePanel];
-  if (!p || !p.items) return;
-  p.items.forEach(it => {
-    it.status = 'order';
-    if (!it.qty || it.qty < 1) it.qty = Number(it.qtyNeeded) || 1;
+  if (!p || !p.tree) return;
+  (p.tree || []).forEach(node => {
+    if (node.auditItem) {
+      // Top-layer leaf - order this one item directly.
+      const it = node.auditItem;
+      it.status = 'order';
+      if (!it.qty || it.qty < 1) it.qty = Number(it.qtyNeeded) || 1;
+      it.wholeAssembly = false;
+    } else {
+      // Top-layer branch - order the whole assembly as one consolidated line.
+      const leaves = collectAuditLeaves(node.children || []);
+      leaves.forEach(l => { l.status = 'order'; l.qty = 1; l.wholeAssembly = true; });
+    }
   });
   render();
 }
