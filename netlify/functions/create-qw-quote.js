@@ -711,16 +711,14 @@ async function emailRep({ rep, docId, base, apiKey }) {
   }
 
   const siteUrl = process.env.URL || process.env.DEPLOY_URL || 'https://bodyshopequipment.solutions';
-  // send-from-rep is a BACKGROUND function (file ends in -background.js). Netlify's
-  // edge/CDN has a hard 30s inactivity timeout on every HTTPS request, INCLUDING
-  // function-to-function calls within the same site. A synchronous invocation of
-  // We bypass QW's SendEmail entirely: log into QW, generate the same PDF the
-  // Preview button produces (qwPrintMethod: 1), download the bytes via
-  // PrintPreviewPdf?id=<uuid>, and send from bodyshop.e.s@gmail.com over Gmail
-  // SMTP directly to the rep. This completes in ~8s and returns a real
-  // messageId instead of the QW SendEmail 30s+ hang.
+  // send-quote-via-gmail is a BACKGROUND function (file ends in -background.js).
+  // Netlify accepts the POST, returns 202 in <1s, and runs the QW-login →
+  // GeneratePrintPdf → download → SMTP-send flow off the request path (up to
+  // 15 minutes). This eliminates the 25-30s edge timeout that was causing the
+  // "operation was aborted" error on the success screen — the quote is created,
+  // the email is queued, and the tech gets the PDF within about a minute.
   try {
-    const resp = await fetch(`${siteUrl}/.netlify/functions/send-quote-via-gmail`, {
+    const resp = await fetch(`${siteUrl}/.netlify/functions/send-quote-via-gmail-background`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -728,30 +726,31 @@ async function emailRep({ rep, docId, base, apiKey }) {
         repUsername: rep,
         repEmail: to,
       }),
-      // Full round-trip is normally ~9s; give it room without approaching the
-      // 26s Netlify edge cap so we can still return a clean error.
-      signal: AbortSignal.timeout(25000),
+      // Background functions ack in well under a second; keep a small timeout
+      // so a totally stalled edge doesn't hang the parent request.
+      signal: AbortSignal.timeout(8000),
     });
-    const body = await resp.json().catch(() => ({}));
-    if (resp.status === 200 && body?.ok) {
+    // Background functions respond 202 Accepted with no body. Anything in the
+    // 2xx range means Netlify queued the invocation — that's success from our
+    // side; the actual send happens off-path.
+    if (resp.status >= 200 && resp.status < 300) {
       return {
-        queued: false,
-        sent: true,
+        queued: true,
+        sent: false,
         to,
-        via: 'gmail-smtp',
-        messageId: body.messageId,
-        subject: body.subject,
-        pdfBytes: body.pdfBytes,
+        via: 'gmail-smtp-background',
         mapped: !!mapped,
         emailSource: resolved.source,
       };
     }
+    // Non-2xx from the edge means the background function itself couldn't be
+    // queued (misdeploy, bad path, throttling). Surface the raw status.
     return {
       queued: false,
       sent: false,
       to,
-      via: 'gmail-smtp',
-      error: body.error || `send failed http ${resp.status}`,
+      via: 'gmail-smtp-background',
+      error: `queue failed http ${resp.status}`,
       mapped: !!mapped,
       emailSource: resolved.source,
     };
@@ -760,7 +759,7 @@ async function emailRep({ rep, docId, base, apiKey }) {
       queued: false,
       sent: false,
       to,
-      via: 'gmail-smtp',
+      via: 'gmail-smtp-background',
       error: e?.message || String(e),
       mapped: !!mapped,
       emailSource: resolved.source,
