@@ -430,7 +430,7 @@
       },
       {
         "partNumber": "CAR51008-1-Kit",
-        "description": "BenchRack5500 VERSA\r\n\r\nIncludes:\r\nManual,\r\nLift on Wheels,\r\nT608 Power Unit,\r\nSafety Switch +*",
+        "description": "BenchRack5500 VERSA Includes: Manual, Lift on Wheels, T608 Power Unit, Safety Switch +*",
         "vendor": "",
         "vendorPartNumber": "CAR51008-1-Kit",
         "lineItemType": 1
@@ -590,7 +590,7 @@
       },
       {
         "partNumber": "CAR51009-KIT",
-        "description": "B96 BR6300 Versa Benchrack +*\r\n\r\nKit Includes:\r\nBR6300 Versa\r\nManual\r\nLift on Wheels\r\nPower Unit\r\nSafety Switch",
+        "description": "B96 BR6300 Versa Benchrack +* Kit Includes: BR6300 Versa Manual Lift on Wheels Power Unit Safety Switch",
         "vendor": "",
         "vendorPartNumber": "CAR51009-KIT",
         "lineItemType": 1
@@ -1001,7 +1001,7 @@
       },
       {
         "partNumber": "863747",
-        "description": "Wire Mig .030 Silicon Bronze\r\n10lb Spool 00SIBE5 **C**",
+        "description": "Wire Mig .030 Silicon Bronze 10lb Spool 00SIBE5 **C**",
         "vendor": "",
         "vendorPartNumber": "863747",
         "lineItemType": 1
@@ -1070,7 +1070,7 @@
       },
       {
         "partNumber": "863747",
-        "description": "Wire Mig .030 Silicon Bronze\r\n10lb Spool 00SIBE5 **C**",
+        "description": "Wire Mig .030 Silicon Bronze 10lb Spool 00SIBE5 **C**",
         "vendor": "",
         "vendorPartNumber": "863747",
         "lineItemType": 1
@@ -1246,6 +1246,428 @@
         "description": "Down Pull for Speed +*",
         "vendor": "",
         "vendorPartNumber": "CAR32992",
+        "lineItemType": 1
+      }
+    ]
+  },
+  "Tru Point Package D": {
+    "bundle_rec_guid": "837A002253BE4FEC905D2CE4774A5F4F",
+    "name": "Tru Point Package D",
+    "items": [
+      {
+        "partNumber": "EESE906D",
+        "description": "TRU-POINT, Unbranded Black Platinum - Package D",
+        "vendor": "",
+        "vendorPartNumber": "EESE906D",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Training Tru Point",
+        "description": "Tru Point Set Up and Training",
+        "vendor": "",
+        "vendorPartNumber": "Training Tru Point",
+        "lineItemType": 1
+      }
+    ]
+  },
+  "Tru Point Package D VSSTA": {
+    "bundle_rec_guid": "C05AA526E575494AB3261D02B6CFD704",
+    "name": "Tru Point Package D VSSTA",
+    "items": [
+      {
+        "partNumber": "EESE906D",
+        "description": "TRU-POINT, Unbranded Black Platinum - Package D",
+        "vendor": "",
+        "vendorPartNumber": "EESE906D",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "VSSTA Scan Tool",
+        "description": "VSSTA Phoenix Remote Sacn Tool",
+        "vendor": "",
+        "vendorPartNumber": "VSSTA Scan Tool",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "VSSTA Maintainer",
+        "description": "Torando 12000 Battery Maintainer",
+        "vendor": "",
+        "vendorPartNumber": "VSSTA Maintainer",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Training Tru Point",
+        "description": "Tru Point Set Up and Training",
+        "vendor": "",
+        "vendorPartNumber": "Training Tru Point",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "VSSTA Training",
+        "description": "VSSTA 2 Day In Shop Calibration Training",
+        "vendor": "",
+        "vendorPartNumber": "VSSTA Training",
+        "lineItemType": 1
+      }
+    ]
+  },
+  "Tru Point Package E": {
+    "bundle_rec_guid": "1E83595C6DC44744AA75A8EDB2B833BC",
+    "name": "Tru Point Package E",
+    "items": [
+      {
+        "partNumber": "EESE906D",
+        "description": "TRU-POINT, Unbranded Black Platinum - Package D",
+        "vendor": "",
+        "vendorPartNumber": "EESE906D",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0388J50A",
+        "description": "Kit, Dibond Locator TGT-06 (360 View) Hon, Acura, Maz +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0388J50A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0362L65A",
+        "description": "Target, Kit, 360 MAT, FOR-SC-01 +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0362L65A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0388J68A",
+        "description": "TARG KIT, HON-SC-01/02 +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0388J68A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0362L62A",
+        "description": "Target Kit, LW, HON-SC-03 +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0362L62A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0388J30A",
+        "description": "360 TARG KIT, HYU-SC-01 +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0388J30A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0388J91A",
+        "description": "KIT, NIS-SC-01/02 +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0388J91A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0370J05A",
+        "description": "Target Kit, 360, VAG-SC-01 +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0370J05A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0362L20A",
+        "description": "FRONTCAM TARG KIT, NIS-FC-03 +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0362L20A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0370J10B",
+        "description": "Target Kit, LIDAR, VAG-FL-01 +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0370J10B",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0370J49A",
+        "description": "KIT CLAMP ASSY BKT-15 +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0370J49A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0363J76H",
+        "description": "TARGET CART, UNIVERSAL +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0363J76H",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0388J67A",
+        "description": "Kit, NIS-SC-03",
+        "vendor": "",
+        "vendorPartNumber": "EAK0388J67A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0388J99A",
+        "description": "TGT-05 2 Pack",
+        "vendor": "",
+        "vendorPartNumber": "EAK0388J99A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0400J40A",
+        "description": "360 Target Kit, TOY-SC-01 +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0400J40A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0400J43A",
+        "description": "360 Add-On, TOY +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0400J43A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0362L44A",
+        "description": "Target Kit, NV, NV-01 +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0362L44A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Discount E",
+        "description": "Package E Discount",
+        "vendor": "",
+        "vendorPartNumber": "Discount E",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Training Tru Point",
+        "description": "Tru Point Set Up and Training",
+        "vendor": "",
+        "vendorPartNumber": "Training Tru Point",
+        "lineItemType": 1
+      }
+    ]
+  },
+  "Tru Point Package E VSSTA": {
+    "bundle_rec_guid": "B83F04C92597436CAD572897C2110B81",
+    "name": "Tru Point Package E VSSTA",
+    "items": [
+      {
+        "partNumber": "EESE906D",
+        "description": "TRU-POINT, Unbranded Black Platinum - Package D",
+        "vendor": "",
+        "vendorPartNumber": "EESE906D",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0388J50A",
+        "description": "Kit, Dibond Locator TGT-06 (360 View) Hon, Acura, Maz +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0388J50A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0362L65A",
+        "description": "Target, Kit, 360 MAT, FOR-SC-01 +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0362L65A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0388J68A",
+        "description": "TARG KIT, HON-SC-01/02 +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0388J68A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0362L62A",
+        "description": "Target Kit, LW, HON-SC-03 +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0362L62A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0388J30A",
+        "description": "360 TARG KIT, HYU-SC-01 +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0388J30A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0388J91A",
+        "description": "KIT, NIS-SC-01/02 +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0388J91A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0370J05A",
+        "description": "Target Kit, 360, VAG-SC-01 +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0370J05A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0362L20A",
+        "description": "FRONTCAM TARG KIT, NIS-FC-03 +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0362L20A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0370J10B",
+        "description": "Target Kit, LIDAR, VAG-FL-01 +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0370J10B",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0370J49A",
+        "description": "KIT CLAMP ASSY BKT-15 +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0370J49A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0363J76H",
+        "description": "TARGET CART, UNIVERSAL +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0363J76H",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0388J67A",
+        "description": "Kit, NIS-SC-03",
+        "vendor": "",
+        "vendorPartNumber": "EAK0388J67A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0388J99A",
+        "description": "TGT-05 2 Pack",
+        "vendor": "",
+        "vendorPartNumber": "EAK0388J99A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0400J40A",
+        "description": "360 Target Kit, TOY-SC-01 +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0400J40A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0400J43A",
+        "description": "360 Add-On, TOY +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0400J43A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "EAK0362L44A",
+        "description": "Target Kit, NV, NV-01 +",
+        "vendor": "",
+        "vendorPartNumber": "EAK0362L44A",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Discount E",
+        "description": "Package E Discount",
+        "vendor": "",
+        "vendorPartNumber": "Discount E",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "VSSTA Scan Tool",
+        "description": "VSSTA Phoenix Remote Sacn Tool",
+        "vendor": "",
+        "vendorPartNumber": "VSSTA Scan Tool",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "VSSTA E",
+        "description": "FREE! VSSTA Scan Tool with Package E",
+        "vendor": "",
+        "vendorPartNumber": "VSSTA E",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "VSSTA Maintainer",
+        "description": "Torando 12000 Battery Maintainer",
+        "vendor": "",
+        "vendorPartNumber": "VSSTA Maintainer",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "Training Tru Point",
+        "description": "Tru Point Set Up and Training",
+        "vendor": "",
+        "vendorPartNumber": "Training Tru Point",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "VSSTA Training",
+        "description": "VSSTA 2 Day In Shop Calibration Training",
+        "vendor": "",
+        "vendorPartNumber": "VSSTA Training",
+        "lineItemType": 1
+      }
+    ]
+  },
+  "CMO Rivet Gun": {
+    "bundle_rec_guid": "6D1D5024D97547B99AD7FA9AE384A570",
+    "name": "CMO Rivet Gun",
+    "items": [
+      {
+        "partNumber": "RV.700",
+        "description": "Self Piercing Riveter Electro-Hydraulic Pump 85kN with digital control complete with 40mm C arm and universal die set (does not include battery & battery charger)",
+        "vendor": "",
+        "vendorPartNumber": "RV.700",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "KIT.RV.FORD",
+        "description": "Ford Set of Dies - F150-For CMO SPR",
+        "vendor": "",
+        "vendorPartNumber": "KIT.RV.FORD",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "RV.192",
+        "description": "Steel C-Arm 130mm - For CMO SPR",
+        "vendor": "",
+        "vendorPartNumber": "RV.192",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "RV.193",
+        "description": "Steel C-Arm 240mm - For CMO SPR",
+        "vendor": "",
+        "vendorPartNumber": "RV.193",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "DD.403",
+        "description": "Trolley, CMO Riveters",
+        "vendor": "",
+        "vendorPartNumber": "DD.403",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "RVMR",
+        "description": "Piston Adapter, Blind Rivets, CMO",
+        "vendor": "",
+        "vendorPartNumber": "RVMR",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "2131873",
+        "description": "18V Battery Starter Kit (includes battery/charger)",
+        "vendor": "",
+        "vendorPartNumber": "2131873",
         "lineItemType": 1
       }
     ]
