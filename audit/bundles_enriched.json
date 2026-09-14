@@ -15681,5 +15681,149 @@
         "expanded": false
       }
     ]
+  },
+  "BlackHawk 220V Welder": {
+    "bundle_rec_guid": "402EE329152F4A09A5097EBF879DA14B",
+    "name": "BlackHawk 220V Welder",
+    "items": [
+      {
+        "partNumber": "BHK-WEL32-KIT",
+        "description": "BlackHawk WEL32 220V MIG Welder Includes: Torch and Gas Regulator",
+        "vendor": "",
+        "vendorPartNumber": "BHK-WEL32-KIT",
+        "lineItemType": 1,
+        "children": [],
+        "expanded": false
+      },
+      {
+        "partNumber": "804711",
+        "description": ".030 Steel MIG Wire spl(11) *C*",
+        "vendor": "",
+        "vendorPartNumber": "804711",
+        "lineItemType": 1,
+        "children": [],
+        "expanded": false
+      },
+      {
+        "partNumber": "48410",
+        "description": "Klutch Two Tier Cart/Cab**C**",
+        "vendor": "",
+        "vendorPartNumber": "48410",
+        "lineItemType": 1,
+        "children": [],
+        "expanded": false
+      }
+    ]
+  },
+  "BlackHawk 3 Torch": {
+    "bundle_rec_guid": "26AC0F8C1F6048E5B3F3E0293D3392D1",
+    "name": "BlackHawk 3 Torch",
+    "items": [
+      {
+        "partNumber": "BHK-WEL35-KIT",
+        "description": "BlackHawk WEL35 3 Torch Pulse MIG Welder 220v Includes: (3) Torches (2) Gas Regulators",
+        "vendor": "",
+        "vendorPartNumber": "BHK-WEL35 US",
+        "lineItemType": 1,
+        "children": [],
+        "expanded": false
+      },
+      {
+        "partNumber": "ATC555405047",
+        "description": "MIG Wire 3/64\" SO Aluminum 1.2 - 5554 5LB **C**",
+        "vendor": "",
+        "vendorPartNumber": "ATC555405047",
+        "lineItemType": 1,
+        "children": [],
+        "expanded": false
+      },
+      {
+        "partNumber": "804711",
+        "description": ".030 Steel MIG Wire spl(11) *C*",
+        "vendor": "",
+        "vendorPartNumber": "804711",
+        "lineItemType": 1,
+        "children": [],
+        "expanded": false
+      },
+      {
+        "partNumber": "863747",
+        "description": "Wire Mig .030 Silicon Bronze 10lb Spool 00SIBE5 **C**",
+        "vendor": "",
+        "vendorPartNumber": "863747",
+        "lineItemType": 1,
+        "children": [],
+        "expanded": false
+      },
+      {
+        "partNumber": "WES411",
+        "description": "Y Connector **C**",
+        "vendor": "",
+        "vendorPartNumber": "WES411",
+        "lineItemType": 1,
+        "children": [],
+        "expanded": false
+      },
+      {
+        "partNumber": "Training CMI",
+        "description": "Pulse MIG Welder Training",
+        "vendor": "",
+        "vendorPartNumber": "Training CMI",
+        "lineItemType": 1,
+        "children": [],
+        "expanded": false
+      }
+    ]
+  },
+  "Vision X1 P2P": {
+    "bundle_rec_guid": "EA226D971D924EC99AE6B8CFE6AC7867",
+    "name": "Vision X1 P2P",
+    "items": [
+      {
+        "partNumber": "CAR90798-KIT",
+        "description": "Vision2-X1-P2P, Repair Planning Measuring System +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR90798-KIT",
+        "lineItemType": 1,
+        "children": [],
+        "expanded": false
+      },
+      {
+        "partNumber": "CAR39635",
+        "description": "M75 Measuring Bridge, 5M +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR39635",
+        "lineItemType": 1,
+        "children": [],
+        "expanded": false
+      },
+      {
+        "partNumber": "Supp.",
+        "description": "Chief Bridge Supports",
+        "vendor": "",
+        "vendorPartNumber": "Supp.",
+        "lineItemType": 1,
+        "children": [],
+        "expanded": false
+      },
+      {
+        "partNumber": "Cover - Vision",
+        "description": "COT Cover",
+        "vendor": "",
+        "vendorPartNumber": "Cover - Vision",
+        "lineItemType": 1,
+        "children": [],
+        "expanded": false
+      },
+      {
+        "partNumber": "Training - New",
+        "description": "Vision/Bench Rack Training",
+        "vendor": "",
+        "vendorPartNumber": "Training - New",
+        "lineItemType": 1,
+        "children": [],
+        "expanded": false
+      }
+    ]
   }
 }
