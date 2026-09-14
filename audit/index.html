@@ -75,6 +75,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--brand-2)
 .bundle-list{list-style:none;padding:0;margin:0}
 .bundle-row{display:flex;align-items:center;gap:10px;padding:12px 8px;border-bottom:1px solid var(--line);cursor:pointer;-webkit-user-select:none;user-select:none}
 .bundle-row:last-child{border-bottom:none}
+.bundle-row .fav-star{background:none;border:none;font-size:22px;line-height:1;color:#cbd5e1;cursor:pointer;padding:2px 4px;flex-shrink:0;-webkit-tap-highlight-color:transparent}
+.bundle-row .fav-star.on{color:#f59e0b}
+.bundle-row .row-thumb{width:44px;height:44px;flex-shrink:0;border-radius:6px;object-fit:cover;background:#f1f5f9;border:1px solid var(--line);cursor:pointer}
+.bundle-row .row-thumb.cam{display:flex;align-items:center;justify-content:center;font-size:20px;color:#64748b}
 .bundle-row .cbwrap{width:28px;height:28px;flex-shrink:0;border:2px solid var(--line);border-radius:6px;display:flex;align-items:center;justify-content:center;background:#fff}
 .bundle-row.checked .cbwrap{background:var(--brand);border-color:var(--brand)}
 .bundle-row.checked .cbwrap::after{content:"";width:6px;height:12px;border:solid #fff;border-width:0 3px 3px 0;transform:rotate(45deg);margin-top:-3px}
@@ -270,6 +274,8 @@ const REPS = [
 const ROLE_QUEUES = ['<Outside Sales>','<Inside Sales>'];
 
 const LS_REP = 'col_audit_rep';
+const LS_FAVS = 'col_audit_favs';       // Set of assembly itemNumbers the rep has starred
+const BUNDLE_PREFIX_ASM = 'asm::';      // synthetic bundle names for ad-hoc assemblies live under this prefix
 const IMG_BASE = 'https://cdn3.gung.io/caroliner/images/';
 function imgUrl(rel){ if(!rel) return ''; return /^https?:/i.test(rel) || rel.startsWith('/') ? rel : (IMG_BASE + rel.replace(/^\/+/,'')); }
 // Return the best photo URL for a part: rep-uploaded (Netlify Blob) if any,
@@ -281,10 +287,12 @@ function photoFor(partNumber, catalogImg){
 }
 
 let BUNDLES = {};        // { bundleName: {name, items:[...], bundle_rec_guid} }
-let BUNDLE_NAMES = [];   // ordered
-let ASSEMBLIES = [];     // fallback catalog for "add from catalog"
+let BUNDLE_NAMES = [];   // ordered — curated bundles only, drives the top-of-page Bundles list
+let ASSEMBLIES = [];     // full assembly catalog — every entry can be audited ad-hoc via the browser below
+let ASSEMBLY_BY_KEY = {};// itemNumber/id -> assembly, for O(1) lookup when starring / opening
 let CONTACTS = [];       // Territory Suite fallback contacts
 let PARTS = [];          // parts_index for catalog search (has more items than assemblies)
+let FAVS = new Set();    // set of assembly keys (itemNumber) the rep has starred
 
 let state = {
   step: 'rep',           // rep | customer | equipment | audit | success
@@ -363,11 +371,21 @@ async function init(){
       try { PART_PHOTOS = (await phRes.json()).photos || {}; } catch(e){}
     }
 
-    // Remember rep across sessions
+    // Build an O(1) lookup so ad-hoc audits and favorites can resolve by itemNumber.
+    ASSEMBLY_BY_KEY = {};
+    (ASSEMBLIES || []).forEach(a => {
+      const k = assemblyKey(a); if (k) ASSEMBLY_BY_KEY[k] = a;
+    });
+
+    // Remember rep + favorites across sessions
     try { const r = localStorage.getItem(LS_REP); if (r) state.rep = r; } catch(e){}
+    try {
+      const raw = localStorage.getItem(LS_FAVS);
+      if (raw) FAVS = new Set(JSON.parse(raw));
+    } catch(e){}
 
     $('#header-sub').textContent =
-      `${BUNDLE_NAMES.length} bundles · ${CONTACTS.length.toLocaleString()} local contacts`;
+      `${BUNDLE_NAMES.length} bundles · ${ASSEMBLIES.length.toLocaleString()} assemblies · ${CONTACTS.length.toLocaleString()} local contacts`;
     render();
   } catch(err){
     $('#app').innerHTML = `<div class="card"><div class="error-banner">Failed to load audit data: ${escapeHtml(err.message)}</div></div>`;
@@ -599,9 +617,139 @@ function clearCustomer(){
 
 // ============================================================================
 // STEP 3 — Equipment checklist
+//
+// Layout (top → bottom):
+//   1. ⭐ Favorites  — the rep's starred assemblies (persisted to localStorage).
+//                     This is the front-page fast-path. Empty state prompts to
+//                     star some from the browser below.
+//   2. Curated bundles — the 17 pre-built kits (5500 with Ramps, B731, CTR9…).
+//   3. Browse all assemblies — searchable list of every assembly in the
+//                     catalog (1,200+). Each row has ⭐ star toggle, checkbox,
+//                     qty stepper. Checking any of these adds an ad-hoc audit
+//                     panel with Auto-detect + full quote support.
 // ============================================================================
+
+// A stable key for an assembly — always its itemNumber (e.g. "CAR30111").
+function assemblyKey(a){ return (a && (a.itemNumber || (a.id ? ('CAR'+a.id) : ''))) || ''; }
+
+// Turn an assembly (itemNumber/desc/parts) into a synthetic bundle so the rest
+// of the audit UI (tabs, tree renderer, Auto-detect, quote build) works
+// unchanged. Bundle name is prefixed with 'asm::<itemNumber>' internally; the
+// display name shown to the rep is the assembly's description + part number.
+function bundleForAssembly(a){
+  const key = assemblyKey(a); if (!key) return null;
+  const bname = BUNDLE_PREFIX_ASM + key;
+  if (BUNDLES[bname]) return bname;                // already registered
+  const display = `${(a.desc || key).replace(/\s+/g,' ').trim()} (${key})`;
+  // Normalize the assembly + its parts into the bundle item shape used by the
+  // audit tree. The assembly itself becomes the top-level item with
+  // expanded:true so its sub-parts show as an audit tree. Each sub-part is a
+  // leaf audit point.
+  const children = (a.parts || []).map(p => ({
+    partNumber: p.itemNumber || (p.id ? 'CAR'+p.id : ''),
+    description: p.desc || '',
+    qty: Number(p.qty) || 1,
+    listPrice: p.listPrice || null,
+    img: p.img || '',
+    depth: 1,
+    children: [],
+  }));
+  BUNDLES[bname] = {
+    bundle_rec_guid: '',
+    name: display,
+    items: [{
+      partNumber: key,
+      description: a.desc || key,
+      vendor: '',
+      vendorPartNumber: key,
+      lineItemType: 1,
+      img: a.img || '',
+      expanded: children.length > 0,
+      children,
+    }],
+  };
+  return bname;
+}
+
+// Human-readable label for a bundle row (strips the internal asm:: prefix).
+function bundleDisplayName(name){
+  if (name && name.startsWith(BUNDLE_PREFIX_ASM)){
+    const b = BUNDLES[name];
+    return (b && b.name) || name.slice(BUNDLE_PREFIX_ASM.length);
+  }
+  return name;
+}
+
+// Favorites persistence
+function saveFavs(){ try { localStorage.setItem(LS_FAVS, JSON.stringify([...FAVS])); } catch(e){} }
+function isFav(key){ return FAVS.has(key); }
+function toggleFav(key){
+  if (!key) return;
+  if (FAVS.has(key)) FAVS.delete(key); else FAVS.add(key);
+  saveFavs();
+  render();
+}
+
+// Toggle an ad-hoc assembly as selected for audit. Registers the synthetic
+// bundle if needed, then uses the normal bundle qty state.
+function toggleAssembly(key){
+  const a = ASSEMBLY_BY_KEY[key]; if (!a) return;
+  const bname = bundleForAssembly(a); if (!bname) return;
+  if (state.bundles[bname]) delete state.bundles[bname];
+  else state.bundles[bname] = 1;
+  render();
+}
+function stepAssembly(key, delta){
+  const a = ASSEMBLY_BY_KEY[key]; if (!a) return;
+  const bname = bundleForAssembly(a); if (!bname) return;
+  const cur = state.bundles[bname] || 0;
+  state.bundles[bname] = Math.max(1, Math.min(9, cur + delta));
+  render();
+}
+
+function assemblyRow(a, opts={}){
+  const key = assemblyKey(a);
+  const bname = BUNDLE_PREFIX_ASM + key;
+  const qty = state.bundles[bname] || 0;
+  const checked = qty > 0;
+  const fav = isFav(key);
+  const photo = photoFor(key, a.img);
+  const partsCount = (a.parts || []).length;
+  const desc = escapeHtml((a.desc || key).replace(/\s+/g,' ').trim());
+  const meta = [
+    escapeHtml(key),
+    partsCount ? `${partsCount} part${partsCount===1?'':'s'}` : 'no sub-parts',
+    a.family ? escapeHtml(a.family) : '',
+  ].filter(Boolean).join(' · ');
+  return `
+    <li class="bundle-row ${checked?'checked':''}">
+      <button class="fav-star ${fav?'on':''}" title="${fav?'Unstar':'Star — pin to Favorites'}" onclick="toggleFav('${escapeHtml(key)}')" aria-label="Toggle favorite">${fav?'★':'☆'}</button>
+      <div class="cbwrap" onclick="toggleAssembly('${escapeHtml(key)}')"></div>
+      ${photo
+        ? `<img class="row-thumb" src="${escapeHtml(photo)}" alt="" onerror="this.style.display='none'" onclick="event.stopPropagation();showLightbox('${escapeHtml(photo)}')">`
+        : `<button class="row-thumb cam" onclick="event.stopPropagation();openPhotoCapture('${escapeHtml(key)}','${desc.replace(/'/g,"\\'")}')" title="Take photo">📷</button>`}
+      <div class="info" onclick="toggleAssembly('${escapeHtml(key)}')">
+        <div class="name">${desc}</div>
+        <div class="sub">${meta}</div>
+      </div>
+      <div class="stepper">
+        <button onclick="stepAssembly('${escapeHtml(key)}',-1)" aria-label="Decrease">−</button>
+        <span class="qty">× ${qty || 1}</span>
+        <button onclick="stepAssembly('${escapeHtml(key)}',1)" aria-label="Increase">+</button>
+      </div>
+    </li>
+  `;
+}
+
 function viewEquipment(){
-  const rows = BUNDLE_NAMES.map(name => {
+  // Section 1: Favorites (starred assemblies) — front-page fast path
+  const favAssemblies = [...FAVS].map(k => ASSEMBLY_BY_KEY[k]).filter(Boolean);
+  const favHtml = favAssemblies.length
+    ? `<ul class="bundle-list">${favAssemblies.map(a => assemblyRow(a)).join('')}</ul>`
+    : `<p class="hint" style="margin:6px 0 0">No favorites yet. Star (☆) any assembly in the browser below and it will pin to the top of this page for every future audit.</p>`;
+
+  // Section 2: Curated bundles (the pre-built kits)
+  const bundleRows = BUNDLE_NAMES.filter(n => !n.startsWith(BUNDLE_PREFIX_ASM)).map(name => {
     const b = BUNDLES[name];
     const qty = state.bundles[name] || 0;
     const checked = qty > 0;
@@ -620,13 +768,26 @@ function viewEquipment(){
       </li>
     `;
   }).join('');
-  const totalUnits = BUNDLE_NAMES.reduce((s,n)=> s + (state.bundles[n]||0), 0);
+
+  const totalUnits = Object.values(state.bundles).reduce((s,q)=> s + (q||0), 0);
+
   return `
     ${stepDots('equipment')}
     <div class="card">
-      <h2 style="margin:0 0 4px;font-size:20px">What equipment are we auditing?</h2>
-      <p class="hint" style="margin-top:0">Check every bundle at this shop. Use +/− for multiples (e.g. two BR5500 lifts).</p>
-      <ul class="bundle-list">${rows}</ul>
+      <h2 style="margin:0 0 4px;font-size:20px">What are we auditing?</h2>
+      <p class="hint" style="margin-top:0">Star ⭐ the assemblies you use most — they'll pin to the top for every audit. Check each item to add it, use +/− for multiples.</p>
+
+      <h3 style="margin:14px 0 6px;font-size:14px;color:var(--brand)">⭐ Favorites</h3>
+      ${favHtml}
+
+      <h3 style="margin:18px 0 6px;font-size:14px;color:var(--brand)">Bundles</h3>
+      <ul class="bundle-list">${bundleRows}</ul>
+
+      <h3 style="margin:18px 0 6px;font-size:14px;color:var(--brand)">Browse all assemblies</h3>
+      <input id="asm-q" placeholder="Search all ${ASSEMBLIES.length.toLocaleString()} assemblies by part number or description…" oninput="onAssemblyBrowse(this.value)" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px" autocomplete="off"/>
+      <p class="hint" style="margin:6px 0">Type at least 2 characters. Star ☆ any assembly to pin it to Favorites.</p>
+      <ul class="bundle-list" id="asm-results"></ul>
+
       <div style="margin-top:14px;display:flex;gap:8px;justify-content:space-between;align-items:center">
         <button class="btn sec" onclick="state.step='customer';render()">← Back</button>
         <div style="font-size:13px;color:var(--muted)">${totalUnits} unit${totalUnits===1?'':'s'} selected</div>
@@ -634,6 +795,20 @@ function viewEquipment(){
       </div>
     </div>
   `;
+}
+
+function onAssemblyBrowse(v){
+  const out = $('#asm-results');
+  if (!out) return;
+  const q = (v || '').trim().toLowerCase();
+  if (q.length < 2){ out.innerHTML = ''; return; }
+  const toks = q.split(/\s+/);
+  const hits = (ASSEMBLIES || []).filter(a => {
+    const hay = [a.itemNumber, a.id, a.pop, a.desc, a.family].filter(Boolean).join(' ').toLowerCase();
+    return toks.every(t => hay.includes(t));
+  }).slice(0, 80);
+  if (!hits.length){ out.innerHTML = '<li class="hint" style="padding:8px 0">No matches.</li>'; return; }
+  out.innerHTML = hits.map(a => assemblyRow(a)).join('');
 }
 function afterEquipment(){/* handlers inline */}
 function toggleBundle(name){
@@ -692,8 +867,12 @@ function startAudit(){
   // Each panel retains the enriched tree for presentation while items holds only
   // leaf audit points. This keeps statuses keyed to individual BOM parts.
   state.panels = [];
-  BUNDLE_NAMES.forEach(name => {
+  // Iterate every selected bundle — curated bundles AND ad-hoc assemblies
+  // (registered under the 'asm::' prefix). Preserve insertion order so
+  // Favorites/Bundles/Browse selections open in the order they were checked.
+  Object.keys(state.bundles).forEach(name => {
     const qty = state.bundles[name] || 0;
+    if (!BUNDLES[name]) return; // safety — stale key
     for (let i=1; i<=qty; i++){
       const tree = BUNDLES[name].items.map((it, idx) => auditTreeForItem(it, it.expanded === true ? it : null, String(idx)));
       state.panels.push({
@@ -730,7 +909,7 @@ function viewAudit(){
   p._visited = true;
   const tabs = state.panels.map((pp, i) => {
     const done = panelDone(pp);
-    return `<button class="tab ${i===state.activePanel?'active':''} ${done?'done':''}" onclick="jumpPanel(${i})">${escapeHtml(pp.bundle_name)} #${pp.unit_number}${done?' ✓':''}</button>`;
+    return `<button class="tab ${i===state.activePanel?'active':''} ${done?'done':''}" onclick="jumpPanel(${i})">${escapeHtml(bundleDisplayName(pp.bundle_name))} #${pp.unit_number}${done?' ✓':''}</button>`;
   }).join('');
   const stats = bundleAuditStats(BUNDLES[p.bundle_name]);
   const items = (p.tree || []).map(node => renderAuditNode(node, p, 0)).join('');
@@ -742,7 +921,7 @@ function viewAudit(){
     <div class="panel-nav">${tabs}</div>
     <div class="card">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:4px;flex-wrap:wrap">
-        <h2 style="margin:0;font-size:18px">${escapeHtml(p.bundle_name)} — Unit #${p.unit_number}</h2>
+        <h2 style="margin:0;font-size:18px">${escapeHtml(bundleDisplayName(p.bundle_name))} — Unit #${p.unit_number}</h2>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn" style="background:var(--brand);min-height:36px;padding:8px 12px;font-size:13px;flex-shrink:0" onclick="openAutoDetect()" title="Take a photo of the shop area and auto-mark items you see as Present">📷 Auto-detect</button>
           <button class="btn" style="background:var(--warn);min-height:36px;padding:8px 12px;font-size:13px;flex-shrink:0" onclick="orderAllInPanel()" title="Mark every item in this bundle as Order">Order all</button>
@@ -1280,7 +1459,7 @@ function renderQuotePreview(){
   const panels = state.panels.filter(p => panelSummary(p).hasWork);
   return panels.map(p => {
     const groups = quotePreviewGroups(p);
-    return `<div style="margin-top:10px"><div style="font-size:12px;font-weight:700;color:var(--brand)">${escapeHtml(p.bundle_name)} #${p.unit_number}</div>${groups.map(g => `
+    return `<div style="margin-top:10px"><div style="font-size:12px;font-weight:700;color:var(--brand)">${escapeHtml(bundleDisplayName(p.bundle_name))} #${p.unit_number}</div>${groups.map(g => `
       <div style="margin:5px 0 0;padding:8px;background:#f8fafc;border-radius:7px"><div style="font-size:13px;font-weight:600">${escapeHtml(g.partNumber)} — ${escapeHtml(g.description)}</div>
       ${g.isParent && g.wholeAssembly ? `<div style="font-size:12px;color:var(--muted);margin-top:3px;font-style:italic">Whole assembly — quoted as one line (× 1)</div>` : ''}
       ${g.isParent && !g.wholeAssembly ? `<div style="font-size:12px;color:var(--muted);margin-top:3px">${g.children.map(c => `• ${escapeHtml(c.partNumber)} (${escapeHtml(c.status)} ${escapeHtml(c.qty || 1)})`).join('<br>')}</div>` : ''}</div>`).join('')}</div>`;
@@ -1496,7 +1675,8 @@ async function confirmCreateQuote(){
   const panels = state.panels
     .filter(p => panelSummary(p).hasWork)
     .map(p => ({
-      bundle_name: p.bundle_name,
+      // Send the human-readable display label to the quote builder, not the internal 'asm::' key
+      bundle_name: bundleDisplayName(p.bundle_name),
       unit_number: p.unit_number,
       order: toLines(p.items),
       custom: (p.custom || []).map(c => ({
