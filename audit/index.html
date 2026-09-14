@@ -741,9 +741,12 @@ function viewAudit(){
     </div>
     <div class="panel-nav">${tabs}</div>
     <div class="card">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:4px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:4px;flex-wrap:wrap">
         <h2 style="margin:0;font-size:18px">${escapeHtml(p.bundle_name)} — Unit #${p.unit_number}</h2>
-        <button class="btn" style="background:var(--warn);min-height:36px;padding:8px 12px;font-size:13px;flex-shrink:0" onclick="orderAllInPanel()" title="Mark every item in this bundle as Order">Order all</button>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn" style="background:var(--brand);min-height:36px;padding:8px 12px;font-size:13px;flex-shrink:0" onclick="openAutoDetect()" title="Take a photo of the shop area and auto-mark items you see as Present">📷 Auto-detect</button>
+          <button class="btn" style="background:var(--warn);min-height:36px;padding:8px 12px;font-size:13px;flex-shrink:0" onclick="orderAllInPanel()" title="Mark every item in this bundle as Order">Order all</button>
+        </div>
       </div>
       <p class="hint" style="margin-top:0">${stats.itemCount} items · ${stats.expandedCount} with sub-parts · ${stats.auditPoints} audit points total</p>
       <div class="audit-tree">${items}</div>
@@ -872,6 +875,168 @@ function showLightbox(url){
 // <input capture=environment>, previews, uploads to Netlify Blobs, then
 // updates PART_PHOTOS and re-renders so the new image is used immediately.
 // ============================================================================
+// ============================================================================
+// Auto-detect: rep takes a photo of a shop area, backend sends the image + the
+// current panel's candidate parts to a vision LLM (Claude via Perplexity API),
+// and matched parts are auto-marked Present. Fully automatic per user prefs.
+// ============================================================================
+function openAutoDetect(){
+  const panel = state.panels[state.activePanel];
+  if (!panel){ alert('No panel active'); return; }
+  // Gather candidates: every audit leaf in this panel, PLUS every branch node
+  // so a rep can auto-detect a whole assembly. Dedupe by partNumber.
+  const cand = [];
+  const seen = new Set();
+  const add = (pn, desc) => {
+    if (!pn || seen.has(pn)) return;
+    seen.add(pn);
+    cand.push({ partNumber: pn, description: desc || '' });
+  };
+  (panel.items || []).forEach(it => add(it.partNumber, it.description));
+  const walk = (nodes) => nodes.forEach(n => {
+    add(n.partNumber, n.description);
+    if (n.children && n.children.length) walk(n.children);
+  });
+  walk(panel.tree || []);
+  if (!cand.length){ alert('No candidate parts in this bundle to detect against'); return; }
+
+  const modal = document.createElement('div');
+  modal.className = 'photo-modal';
+  modal.innerHTML = `
+    <div class="box">
+      <h3>Auto-detect parts from photo</h3>
+      <div class="sub">Take a photo of the shop wall, rack, or assembly. AI will mark every part it sees as <strong>Present</strong>. Checking <strong>${cand.length}</strong> candidate part${cand.length===1?'':'s'} in <strong>${escapeHtml(panel.bundle_name)}</strong>.</div>
+      <img class="preview" alt="preview">
+      <input type="file" accept="image/*" capture="environment">
+      <div class="row">
+        <button class="btn take">📷 Take photo</button>
+        <button class="btn sec pick">Choose from library</button>
+      </div>
+      <div class="row" style="margin-top:8px;display:none" data-role="confirm">
+        <button class="btn detect">🔍 Detect parts</button>
+        <button class="btn sec retake">Retake</button>
+      </div>
+      <div class="row" style="margin-top:8px"><button class="btn sec cancel" style="flex:1">Cancel</button></div>
+      <div class="sub" data-role="status" style="margin-top:8px"></div>
+      <div data-role="results" style="margin-top:10px"></div>
+    </div>`;
+  document.body.appendChild(modal);
+  const input = modal.querySelector('input[type=file]');
+  const preview = modal.querySelector('.preview');
+  const confirmRow = modal.querySelector('[data-role=confirm]');
+  const status = modal.querySelector('[data-role=status]');
+  const results = modal.querySelector('[data-role=results]');
+  let chosen = null;
+
+  modal.querySelector('.cancel').onclick = () => modal.remove();
+  modal.querySelector('.take').onclick = () => { input.setAttribute('capture','environment'); input.click(); };
+  modal.querySelector('.pick').onclick = () => { input.removeAttribute('capture'); input.click(); };
+  modal.querySelector('.retake').onclick = () => {
+    chosen = null; preview.classList.remove('on'); preview.src=''; confirmRow.style.display='none'; status.textContent=''; results.innerHTML='';
+  };
+  input.onchange = () => {
+    const f = input.files && input.files[0];
+    if (!f) return;
+    chosen = f;
+    preview.src = URL.createObjectURL(f);
+    preview.classList.add('on');
+    confirmRow.style.display = 'flex';
+    status.textContent = `${(f.size/1024/1024).toFixed(2)} MB · ${f.type || 'image'}`;
+  };
+  modal.querySelector('.detect').onclick = async () => {
+    if (!chosen){ status.textContent = 'No photo selected'; return; }
+    status.textContent = 'Compressing photo…';
+    let dataUrl;
+    try {
+      dataUrl = await compressToDataUrl(chosen, 1600, 0.85);
+    } catch(err){
+      status.textContent = 'Compression failed: ' + err.message;
+      return;
+    }
+    status.textContent = `Analyzing photo… (this takes 5-15 seconds)`;
+    try {
+      const res = await fetch('/.netlify/functions/detect-parts-in-photo', {
+        method: 'POST',
+        headers: {'content-type':'application/json'},
+        body: JSON.stringify({
+          photoDataUrl: dataUrl,
+          candidates: cand,
+          hint: `Bundle: ${panel.bundle_name}`,
+        }),
+      });
+      const j = await res.json();
+      if (!res.ok || !j.ok) throw new Error(j.error || `HTTP ${res.status}`);
+      const applied = applyDetections(j.detected || [], panel);
+      const detCount = (j.detected || []).length;
+      const cost = j.cost_usd ? ` · $${j.cost_usd.toFixed(4)}` : '';
+      status.textContent = `Detected ${detCount} part${detCount===1?'':'s'}, marked ${applied} as Present${cost}.`;
+      results.innerHTML = renderDetections(j.detected || [], applied);
+      render();
+    } catch(err){
+      status.textContent = 'Detection failed: ' + err.message;
+    }
+  };
+}
+
+// Downscale a File to a data URL under ~1MB so the vision API call is fast.
+// Maintains aspect ratio, max dimension = maxSide.
+function compressToDataUrl(file, maxSide=1600, quality=0.85){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      const scale = Math.min(1, maxSide / Math.max(width, height));
+      width = Math.round(width * scale);
+      height = Math.round(height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => reject(new Error('image decode failed'));
+    img.src = url;
+  });
+}
+
+// Apply detection results to the panel: mark matching leaves as Present.
+// Returns the number of leaves flipped.
+function applyDetections(detected, panel){
+  const wanted = new Set(detected.map(d => (d.partNumber||'').toString().toUpperCase()));
+  let applied = 0;
+  (panel.items || []).forEach(it => {
+    if (wanted.has((it.partNumber||'').toUpperCase())){
+      if (it.status !== 'present'){ it.status = 'present'; it.qty = 1; it.note = ''; applied++; }
+    }
+  });
+  // Walk the tree: if a branch's partNumber is detected, mark ALL its leaves
+  // Present (whole-assembly present). Otherwise check individual leaves.
+  const walk = (nodes) => nodes.forEach(n => {
+    if (n.partNumber && wanted.has(n.partNumber.toUpperCase())){
+      const leaves = collectAuditLeaves([n]);
+      if (leaves.length){
+        // Detected the parent - mark every leaf under it Present
+        leaves.forEach(l => { if (l.status !== 'present'){ l.status='present'; l.qty=1; l.note=''; l.wholeAssembly=false; applied++; } });
+      } else {
+        // Leaf-only branch: this IS a leaf audit item, but rare
+      }
+    }
+    if (n.children && n.children.length) walk(n.children);
+  });
+  walk(panel.tree || []);
+  return applied;
+}
+function renderDetections(detected, appliedCount){
+  if (!detected.length) return `<div class="sub" style="padding:8px;background:#fff7ed;border:1px solid #fdba74;border-radius:6px;color:#9a3412">No matching parts detected in this photo. Try another angle or a closer shot.</div>`;
+  const rows = detected.map(d => {
+    const badge = d.confidence === 'high' ? '🟢' : d.confidence === 'low' ? '🟡' : '🔵';
+    return `<div style="padding:6px 8px;border-bottom:1px solid var(--line);font-size:13px"><strong>${badge} ${escapeHtml(d.partNumber)}</strong> <span style="color:var(--muted)">· ${escapeHtml(d.confidence)}</span><div style="color:var(--muted);font-size:12px">${escapeHtml(d.reasoning||'')}</div></div>`;
+  }).join('');
+  return `<div style="border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-top:6px">${rows}</div>`;
+}
+
 function openPhotoCapture(partNumber, description){
   if (!partNumber){ alert('Missing part number'); return; }
   const modal = document.createElement('div');
