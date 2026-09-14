@@ -961,7 +961,7 @@ function openAutoDetect(){
         body: JSON.stringify({
           photoDataUrl: dataUrl,
           candidates: cand,
-          hint: `Bundle: ${panel.bundle_name}`,
+          hint: `Bundle: ${panel.bundle_name}. If the photo is a shadow board with white silhouette outlines showing where parts belong, treat empty outlined positions as MISSING - only report parts that are physically hung/placed on the board. Position labels visible on the board (like H4, G1, E120) are strong clues for matching part descriptions.`,
         }),
       });
       const j = await res.json();

@@ -106,10 +106,10 @@ ${catalogText}${hint ? `\n\nRep context: ${hint}` : ''}`;
   return json({
     ok: true,
     detected,
-    raw_text: text,
     cost_usd: cost,
     model: MODEL,
-    usage: parsed?.usage || null,
+    input_tokens: parsed?.usage?.input_tokens ?? null,
+    output_tokens: parsed?.usage?.output_tokens ?? null,
   });
 };
 
