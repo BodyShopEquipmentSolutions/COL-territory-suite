@@ -141,6 +141,32 @@ function clip(field, val) {
   return max && s.length > max ? s.slice(0, max) : s;
 }
 
+// QW's Real-time Data tax lookup keys off the FULL state name, not the
+// 2-letter postal abbreviation. Empirically: quotes saved with 'Texas' get
+// auto-tax at 0.0825, quotes saved with 'TX' get zero. Expand 2-letter
+// codes before writing to QW; leave anything else (full names, non-US,
+// blank) untouched.
+const US_STATE_NAMES = {
+  AL:'Alabama', AK:'Alaska', AZ:'Arizona', AR:'Arkansas', CA:'California',
+  CO:'Colorado', CT:'Connecticut', DE:'Delaware', FL:'Florida', GA:'Georgia',
+  HI:'Hawaii', ID:'Idaho', IL:'Illinois', IN:'Indiana', IA:'Iowa',
+  KS:'Kansas', KY:'Kentucky', LA:'Louisiana', ME:'Maine', MD:'Maryland',
+  MA:'Massachusetts', MI:'Michigan', MN:'Minnesota', MS:'Mississippi',
+  MO:'Missouri', MT:'Montana', NE:'Nebraska', NV:'Nevada', NH:'New Hampshire',
+  NJ:'New Jersey', NM:'New Mexico', NY:'New York', NC:'North Carolina',
+  ND:'North Dakota', OH:'Ohio', OK:'Oklahoma', OR:'Oregon', PA:'Pennsylvania',
+  RI:'Rhode Island', SC:'South Carolina', SD:'South Dakota', TN:'Tennessee',
+  TX:'Texas', UT:'Utah', VT:'Vermont', VA:'Virginia', WA:'Washington',
+  WV:'West Virginia', WI:'Wisconsin', WY:'Wyoming', DC:'District of Columbia',
+};
+function expandStateName(val) {
+  if (val == null) return val;
+  const s = String(val).trim();
+  if (s.length !== 2) return s;
+  const upper = s.toUpperCase();
+  return US_STATE_NAMES[upper] || s;
+}
+
 // ---------------------------------------------------------------------------
 // Look up a product by ManufacturerPartNumber. Returns { manufacturer, description,
 // price, cost, list } or null. Tries the raw SKU first, then a dash-normalized
@@ -293,7 +319,7 @@ async function createHeader(base, apiKey, { rep, customer, shippingAmount }) {
     const company = customer.company || customer.customer;
     if (company)           attrs.SoldToCompany  = clip('SoldToCompany',  company);
     if (customer.city)     attrs.SoldToCity     = clip('SoldToCity',     customer.city);
-    if (customer.state)    attrs.SoldToState    = clip('SoldToState',    customer.state);
+    if (customer.state)    attrs.SoldToState    = clip('SoldToState',    expandStateName(customer.state));
     if (customer.phone)    attrs.SoldToPhone    = clip('SoldToPhone',    customer.phone);
     if (customer.fax)      attrs.SoldToFax      = clip('SoldToFax',      customer.fax);
     if (customer.address)  attrs.SoldToAddress1 = clip('SoldToAddress1', customer.address);
@@ -310,7 +336,7 @@ async function createHeader(base, apiKey, { rep, customer, shippingAmount }) {
     // Reps can edit ShipTo in QW if the ship-to differs from sold-to.
     if (company)           attrs.ShipToCompany  = clip('SoldToCompany',  company);
     if (customer.city)     attrs.ShipToCity     = clip('SoldToCity',     customer.city);
-    if (customer.state)    attrs.ShipToState    = clip('SoldToState',    customer.state);
+    if (customer.state)    attrs.ShipToState    = clip('SoldToState',    expandStateName(customer.state));
     if (customer.phone)    attrs.ShipToPhone    = clip('SoldToPhone',    customer.phone);
     if (customer.address)  attrs.ShipToAddress1 = clip('SoldToAddress1', customer.address);
     if (customer.address2) attrs.ShipToAddress2 = clip('SoldToAddress2', customer.address2);
@@ -383,6 +409,28 @@ async function createQuote(base, apiKey, { rep, customer, panels, addons }) {
     shippingAmount: Number(addons.freight) || 0,
   });
   const docId = header.id;
+
+  // Tax exemption: for schools, nonprofits, resellers, etc. the rep marks
+  // the quote exempt in the audit UI. We PATCH the header immediately after
+  // create to force all tax fields to zero and set the exempt flag, so QW's
+  // auto-lookup can't overwrite. ShipToTaxCode='EXEMPT' also signals the
+  // exempt state to QW's own layout template.
+  if (addons.taxExempt) {
+    diag.taxExempt = true;
+    try {
+      await qwFetch(base, apiKey,
+        `/api/v1/qw/tables/DocumentHeaders/${encodeURIComponent(docId)}`,
+        { method: 'PATCH', body: { data: { type: 'DocumentHeaders', id: docId, attributes: {
+          LocalTax: 0, LocalTaxRate: 0,
+          GSTTax: 0, GSTTaxRate: 0, GSTTaxExempt: true,
+          TotalTax: 0,
+          AlternateLocalTax: 0, AlternateGSTTax: 0, AlternateTotalTax: 0,
+          ShipToTaxCode: 'EXEMPT',
+        }}}});
+    } catch (e) {
+      diag.taxExemptError = e?.message || String(e);
+    }
+  }
 
   // Product lookup cache shared across the whole quote.
   const productCache = new Map();
@@ -834,8 +882,7 @@ export const handler = async (event) => {
         training: Array.isArray(addons.training) ? addons.training.length : 0,
         installation: Array.isArray(addons.installation) ? addons.installation.length : 0,
         freight: Number(addons.freight) || 0,
-        tax: !!addons.tax,
-        taxRate: Number(addons.taxRate) || 0,
+        taxExempt: !!addons.taxExempt,
       } : null;
       log('create_quote in:',
         'rep=', rep,

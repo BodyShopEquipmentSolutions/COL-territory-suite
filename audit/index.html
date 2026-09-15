@@ -308,8 +308,9 @@ let state = {
     installation: [],    // array of INSTALL_OPTIONS.sku
     freight: 0,          // dollar amount
     discount: { type: 'percent', value: 0 }, // discount applied to equipment subtotal ONLY
-    // Sales tax intentionally NOT here — QuoteWerks handles tax natively
-    // from the ship-to address via its built-in Real-time Data lookup.
+    taxExempt: false,    // force-zero all tax fields (schools, nonprofits, resellers)
+    // Non-exempt quotes get automatic tax from QuoteWerks' built-in
+    // Real-time Data lookup keyed off the ship-to address.
   },
 };
 
@@ -1584,9 +1585,16 @@ function renderAddons(){
         </label>
       </div>
 
-      <div class="addon-section addon-note">
-        <div style="font-size:12px;color:var(--muted);line-height:1.4">
-          <strong>Sales tax:</strong> QuoteWerks computes tax automatically from the customer's ship-to address after the quote is created. Click “Lookup Tax Rate” in QW if it doesn't appear.
+      <div class="addon-section">
+        <div class="addon-section-title">Sales tax</div>
+        <label class="addon-row">
+          <input type="checkbox" ${a.taxExempt?'checked':''} onchange="toggleTaxExempt(this.checked)">
+          <span class="addon-label"><strong>Tax exempt</strong> <span style="color:var(--muted);font-weight:400;font-size:12px">(schools, nonprofits, resellers — forces $0 tax)</span></span>
+        </label>
+        <div style="font-size:12px;color:var(--muted);line-height:1.4;margin-top:6px">
+          ${a.taxExempt
+            ? 'Quote will be created with tax forced to $0 and marked EXEMPT.'
+            : 'QuoteWerks computes tax automatically from the ship-to address. Click “Lookup Tax Rate” in QW if it doesn\'t appear.'}
         </div>
       </div>
     </div>`;
@@ -1596,6 +1604,7 @@ function rerenderAddons(){
   if (el) el.innerHTML = renderAddons();
 }
 function toggleLogistics(v){ state.addons.logistics = !!v; rerenderAddons(); }
+function toggleTaxExempt(v){ state.addons.taxExempt = !!v; rerenderAddons(); }
 function toggleTraining(sku, v){
   const set = new Set(state.addons.training || []);
   if (v) set.add(sku); else set.delete(sku);
@@ -1700,6 +1709,7 @@ async function confirmCreateQuote(){
       ? { type: (state.addons.discount.type === 'flat' ? 'flat' : 'percent'),
           value: Number(state.addons.discount.value) }
       : null,
+    taxExempt: !!state.addons.taxExempt,
   };
 
   // Client timeout — the server now creates the QW quote synchronously (fast)
