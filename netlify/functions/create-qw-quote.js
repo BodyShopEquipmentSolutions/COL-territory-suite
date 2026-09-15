@@ -167,6 +167,43 @@ function expandStateName(val) {
   return US_STATE_NAMES[upper] || s;
 }
 
+// State → typical combined sales-tax rate (state + average local).
+// Applied to SubTotal when the customer isn't tax-exempt. Sources:
+// TX Comptroller (metros 8.25%), Tax Foundation state+avg-local tables,
+// each state's revenue dept publication. Kept intentionally conservative
+// — rural areas may be lower; reps can adjust in QW before finalizing.
+// A rate of null means "do not apply tax" (state has no sales tax).
+const COMBINED_TAX_RATE = {
+  AL: 0.0925, AK: null,   AZ: 0.084,  AR: 0.0946, CA: 0.0872,
+  CO: 0.0777, CT: 0.0635, DE: null,   FL: 0.07,   GA: 0.0738,
+  HI: 0.045,  ID: 0.0603, IL: 0.0885, IN: 0.07,   IA: 0.0694,
+  KS: 0.0872, KY: 0.06,   LA: 0.0956, ME: 0.055,  MD: 0.06,
+  MA: 0.0625, MI: 0.06,   MN: 0.0812, MS: 0.0707, MO: 0.0838,
+  MT: null,   NE: 0.0695, NV: 0.0824, NH: null,   NJ: 0.0663,
+  NM: 0.0779, NY: 0.0853, NC: 0.0699, ND: 0.0704, OH: 0.0725,
+  OK: 0.0899, OR: null,   PA: 0.0634, RI: 0.07,   SC: 0.0744,
+  SD: 0.0611, TN: 0.0955, TX: 0.0825, UT: 0.0725, VT: 0.0636,
+  VA: 0.0577, WA: 0.0938, WV: 0.0557, WI: 0.0543, WY: 0.0536,
+  DC: 0.06,
+};
+function lookupTaxRate(stateVal) {
+  if (!stateVal) return null;
+  const s = String(stateVal).trim();
+  if (!s) return null;
+  // Accept full name OR 2-letter code
+  const upperShort = s.length === 2 ? s.toUpperCase() : null;
+  const codeFromName = Object.entries(US_STATE_NAMES).find(
+    ([, name]) => name.toLowerCase() === s.toLowerCase()
+  );
+  const code = upperShort || (codeFromName ? codeFromName[0] : null);
+  if (!code) return null;
+  const rate = COMBINED_TAX_RATE[code];
+  return (rate == null) ? null : Number(rate);
+}
+function round2(n) {
+  return Math.round((Number(n) || 0) * 100) / 100;
+}
+
 // ---------------------------------------------------------------------------
 // Look up a product by ManufacturerPartNumber. Returns { manufacturer, description,
 // price, cost, list } or null. Tries the raw SKU first, then a dash-normalized
@@ -410,27 +447,8 @@ async function createQuote(base, apiKey, { rep, customer, panels, addons }) {
   });
   const docId = header.id;
 
-  // Tax exemption: for schools, nonprofits, resellers, etc. the rep marks
-  // the quote exempt in the audit UI. We PATCH the header immediately after
-  // create to force all tax fields to zero and set the exempt flag, so QW's
-  // auto-lookup can't overwrite. ShipToTaxCode='EXEMPT' also signals the
-  // exempt state to QW's own layout template.
-  if (addons.taxExempt) {
-    diag.taxExempt = true;
-    try {
-      await qwFetch(base, apiKey,
-        `/api/v1/qw/tables/DocumentHeaders/${encodeURIComponent(docId)}`,
-        { method: 'PATCH', body: { data: { type: 'DocumentHeaders', id: docId, attributes: {
-          LocalTax: 0, LocalTaxRate: 0,
-          GSTTax: 0, GSTTaxRate: 0, GSTTaxExempt: true,
-          TotalTax: 0,
-          AlternateLocalTax: 0, AlternateGSTTax: 0, AlternateTotalTax: 0,
-          ShipToTaxCode: 'EXEMPT',
-        }}}});
-    } catch (e) {
-      diag.taxExemptError = e?.message || String(e);
-    }
-  }
+  // Tax is applied after lines exist (below) so we can multiply against
+  // QW's computed SubTotal. See the tax block near the end of this function.
 
   // Product lookup cache shared across the whole quote.
   const productCache = new Map();
@@ -714,12 +732,11 @@ async function createQuote(base, apiKey, { rep, customer, panels, addons }) {
   //    Shipping box (right next to Sales Tax at the bottom of the quote) fills
   //    itself. See createHeader() where shippingAmount is written to attrs.
 
-  // NOTE: Sales tax is intentionally NOT added as a line item here.
-  // QuoteWerks has native tax handling via LocalTax/LocalTaxRate/TotalTax on
-  // DocumentHeaders and can auto-lookup by ShipTo address (Real-time Data
-  // module, already licensed). Reps click "Lookup Tax Rate" in QW after
-  // opening the quote, or QW can pull it automatically from the CRM. Rolling
-  // our own would create two sources of truth and conflict with QW's engine.
+  // Sales tax is written to the DocumentHeaders row (LocalTax/LocalTaxRate/
+  // TotalTax) after lines exist so we can multiply against QW's computed
+  // SubTotal. QW's built-in Real-time Data lookup does NOT fire on REST-
+  // API-created quotes (only from the QW desktop client), so we do it here.
+  // Reps can still click "Lookup Tax Rate" in QW later to refresh.
 
   // Sequential insert preserves LineNumberActual assignment order in QW.
   // The frontend collapses whole-assembly rollups so this loop stays small.
@@ -727,17 +744,57 @@ async function createQuote(base, apiKey, { rep, customer, panels, addons }) {
     await createLine(base, apiKey, docId, { LineNumberActual: i + 1, ...plan[i] });
   }
 
-  // Re-fetch header to pick up the DocNo (assigned server-side on create in
-  // some QW versions; safe re-read either way).
+  // Re-fetch header to pick up the DocNo AND the QW-computed SubTotal (which
+  // we need to compute tax against). Combined into one call to avoid two
+  // round-trips.
   let docNo = header.docNo;
-  if (!docNo) {
-    try {
-      const refreshed = await fetchHeader(base, apiKey, docId);
-      docNo = refreshed && refreshed.data && refreshed.data.attributes && refreshed.data.attributes.DocNo;
-    } catch (e) {
-      // Non-fatal — the quote exists; we just don't have the human number.
+  let subTotal = 0;
+  try {
+    const refreshed = await fetchHeader(base, apiKey, docId);
+    const attrs = refreshed && refreshed.data && refreshed.data.attributes || {};
+    if (!docNo) docNo = attrs.DocNo || null;
+    subTotal = Number(attrs.SubTotal) || 0;
+  } catch (e) {
+    // Non-fatal for docNo. For tax it means we won't compute — diag will show why.
+    diag.headerRefreshError = e?.message || String(e);
+  }
+
+  // Apply tax: either force-zero (exempt) or compute from ship-to state.
+  const taxPatch = {};
+  if (addons.taxExempt) {
+    diag.taxExempt = true;
+    Object.assign(taxPatch, {
+      LocalTax: 0, LocalTaxRate: 0,
+      GSTTax: 0, GSTTaxRate: 0, GSTTaxExempt: true,
+      TotalTax: 0,
+      AlternateLocalTax: 0, AlternateGSTTax: 0, AlternateTotalTax: 0,
+      ShipToTaxCode: 'EXEMPT',
+    });
+  } else if (subTotal > 0) {
+    const rate = lookupTaxRate(fullCustomer && fullCustomer.state);
+    diag.taxRateResolved = rate;
+    diag.taxSubTotal = subTotal;
+    if (rate != null && rate > 0) {
+      const localTax = round2(subTotal * rate);
+      Object.assign(taxPatch, {
+        LocalTax: localTax, LocalTaxRate: rate,
+        TotalTax: localTax,
+        AlternateLocalTax: localTax, AlternateTotalTax: localTax,
+        GSTTaxExempt: false,
+      });
+      diag.taxAmount = localTax;
     }
   }
+  if (Object.keys(taxPatch).length > 0) {
+    try {
+      await qwFetch(base, apiKey,
+        `/api/v1/qw/tables/DocumentHeaders/${encodeURIComponent(docId)}`,
+        { method: 'PATCH', body: { data: { type: 'DocumentHeaders', id: docId, attributes: taxPatch }}});
+    } catch (e) {
+      diag.taxPatchError = e?.message || String(e);
+    }
+  }
+
   return { docId, docNo: docNo || null, diag };
 }
 
