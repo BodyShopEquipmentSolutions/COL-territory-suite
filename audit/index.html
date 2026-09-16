@@ -1325,9 +1325,13 @@ function afterAudit(){
 }
 
 function setItemStatus(idx, s){
+  // Individual leaf action - explicit per-item pick. Always clear the
+  // wholeAssembly flag so a prior assembly-level 'order' doesn't cause
+  // the server to roll this leaf up into the parent SKU line.
   const p = state.panels[state.activePanel];
   const it = p.items[idx];
   it.status = s;
+  it.wholeAssembly = false;
   if (s === 'order'){ if (!it.qty) it.qty = 1; }
   render();
 }
