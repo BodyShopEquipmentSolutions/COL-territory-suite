@@ -335,19 +335,19 @@ async function createHeader(base, apiKey, { rep, customer, shippingAmount }) {
   // QW's REST API does NOT auto-populate SoldTo fields from a CRM link on POST.
   // Send every field the frontend has — and also stamp SoldToCMCompanyRecID
   // so the quote stays associated with the CRM record for future lookups.
-  // QW stores the QW username in SalesRep - keep that so desktop-side
-  // reports and rep filters continue to work (QW desktop writes the
-  // username here too). The PDF template renders PreparedBy verbatim,
-  // so send the display-name form ('Ryan Harthcock') there so the
-  // emailed PDF reads correctly for every rep.
-  const repDisplay = prettyRep(rep) || rep;
+  // SalesRep / PreparedBy / CreatedBy MUST be a QW username - QW REST
+  // validates them against SecurityAccounts and rejects any string that
+  // isn't a known user (422 'not a user in SecurityAccounts'). The rep's
+  // display name is pulled from UserSettings.FullName by QW Web when it
+  // renders the quote, so populating FullName in Preferences is the right
+  // place to fix rendered rep names.
   const attrs = {
     DocType: 'QUOTE',
     DocStatus: 'Open',
     DocDate: nowIso(),
     SalesRep: rep,
-    PreparedBy: repDisplay,
-    CreatedBy: repDisplay,
+    PreparedBy: rep,
+    CreatedBy: rep,
   };
   // Shipping/freight lives on the header (drives the Shipping box next to
   // Sales Tax in the PDF layout) — NOT as a line item. Populate both
