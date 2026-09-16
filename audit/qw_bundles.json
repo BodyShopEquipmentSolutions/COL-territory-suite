@@ -1787,5 +1787,138 @@
         "lineItemType": 1
       }
     ]
+  },
+  "PNP90 XT2 (NLA / CAR90659)": {
+    "bundle_rec_guid": "SYNTHETIC-PNP90-XT2-CAR90659",
+    "name": "PNP90 XT2 (NLA / CAR90659)",
+    "synthetic": true,
+    "items": [
+      {
+        "partNumber": "CAR48107",
+        "description": "PNP90 XT\u00b2 10T Rivet Gun (tool set incl. case) +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48107",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR48109",
+        "description": "PNP90 XT\u00b2 Full Function Rack (10T + Blind Rivet Gun) +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48109",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR48111",
+        "description": "PNP90 \u2192 PNP90 XT2 Upgrade Kit (brochure PN \u2014 not in WSS catalog) +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48111",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR48416",
+        "description": "PNP90 6-Ton Rivet Gun Basic Kit (excl. case) +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48416",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR45704",
+        "description": "PNP90 6T Basic Kit incl. BMW Mandrel Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR45704",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR48150",
+        "description": "Blind Rivet Gun + Extended Tool Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48150",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR45709",
+        "description": "BMW Mandrel Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR45709",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR48188",
+        "description": "Ford Mandrel Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48188",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR48161",
+        "description": "VW/Audi Mandrel Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48161",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR48151",
+        "description": "JLR (Jaguar/Landrover) Mandrel Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48151",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR49411",
+        "description": "JLR XT2 Self-Pierce Riveting Tool Set (brochure PN \u2014 not in WSS catalog) +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR49411",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR48080",
+        "description": "NB130 Rivet Clamp (10T) \u2014 Accessory +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48080",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR48081",
+        "description": "NB240 Rivet Clamp (10T) \u2014 Accessory +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48081",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR48097",
+        "description": "Case for PNP90 / PNP90 XT2 Pump +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48097",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR48099",
+        "description": "Case for NB130 & NB240 Clamps +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48099",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR48100",
+        "description": "Case for Blind Rivet Tool +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48100",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR48210",
+        "description": "PNP90 XT\u00b2 Complete Storage Cart +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48210",
+        "lineItemType": 1
+      },
+      {
+        "partNumber": "CAR48138",
+        "description": "A-Tong Adapter Kit FS (Universal Adaption) +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48138",
+        "lineItemType": 1
+      }
+    ]
   }
 }

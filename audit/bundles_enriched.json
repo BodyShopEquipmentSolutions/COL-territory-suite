@@ -15825,5 +15825,1552 @@
         "expanded": false
       }
     ]
+  },
+  "PNP90 XT2 (NLA / CAR90659)": {
+    "bundle_rec_guid": "SYNTHETIC-PNP90-XT2-CAR90659",
+    "name": "PNP90 XT2 (NLA / CAR90659)",
+    "synthetic": true,
+    "note": "CAR90659 is NLA. Audit tree built from Car-O-Liner PNP90 & PNP90 XT2 brochure (45726, 2021-06) and PNP 90 SNW XT2 service manual. Sub-components without a Car-O-Liner PN are shown as descriptive rows so the rep can verify what a customer still has.",
+    "items": [
+      {
+        "partNumber": "CAR48107",
+        "description": "PNP90 XT\u00b2 10T Rivet Gun (tool set incl. case) +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48107",
+        "lineItemType": 1,
+        "children": [
+          {
+            "partNumber": "",
+            "description": "PNP 90 SNW XT2 pressure booster (pump) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Hydraulic actuator HA XT2 (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Duo hose package DN4 (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Handle MB (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Adapter Kit 60 kN (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Rivet clamp NB45 (aperture 80\u00d745mm) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Riveting Tool Kit 1 XT2 \u2013 Punching (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": [
+              {
+                "partNumber": "",
+                "description": "Stamping die \u00d86mm (green) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                "qty": 1,
+                "listPrice": null,
+                "img": "",
+                "depth": 3,
+                "children": []
+              },
+              {
+                "partNumber": "",
+                "description": "Stamping die \u00d88mm (yellow) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                "qty": 1,
+                "listPrice": null,
+                "img": "",
+                "depth": 3,
+                "children": []
+              },
+              {
+                "partNumber": "",
+                "description": "Stamping punch \u00d86mm (green) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                "qty": 1,
+                "listPrice": null,
+                "img": "",
+                "depth": 3,
+                "children": []
+              },
+              {
+                "partNumber": "",
+                "description": "Stamping punch \u00d88mm (yellow) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                "qty": 1,
+                "listPrice": null,
+                "img": "",
+                "depth": 3,
+                "children": []
+              },
+              {
+                "partNumber": "",
+                "description": "Slide bushing \u00d86mm (green) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                "qty": 1,
+                "listPrice": null,
+                "img": "",
+                "depth": 3,
+                "children": []
+              },
+              {
+                "partNumber": "",
+                "description": "Slide bushing \u00d88mm (green) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                "qty": 1,
+                "listPrice": null,
+                "img": "",
+                "depth": 3,
+                "children": []
+              },
+              {
+                "partNumber": "",
+                "description": "Punch retainer (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                "qty": 1,
+                "listPrice": null,
+                "img": "",
+                "depth": 3,
+                "children": []
+              },
+              {
+                "partNumber": "CAR48187",
+                "description": "Key set SW13 / SW16",
+                "qty": 1,
+                "listPrice": 94,
+                "img": "3040/48187.jpg",
+                "depth": 3,
+                "children": []
+              }
+            ]
+          },
+          {
+            "partNumber": "",
+            "description": "Riveting Tool Kit 2 XT2 \u2013 Flow form rivets (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": [
+              {
+                "partNumber": "",
+                "description": "Flow form punch \u00d86mm (blue) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                "qty": 1,
+                "listPrice": null,
+                "img": "",
+                "depth": 3,
+                "children": []
+              },
+              {
+                "partNumber": "",
+                "description": "Flow form die \u00d86mm (blue) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                "qty": 1,
+                "listPrice": null,
+                "img": "",
+                "depth": 3,
+                "children": []
+              },
+              {
+                "partNumber": "",
+                "description": "Flow form punch \u00d88mm (orange) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                "qty": 1,
+                "listPrice": null,
+                "img": "",
+                "depth": 3,
+                "children": []
+              },
+              {
+                "partNumber": "",
+                "description": "Flow form die \u00d88mm (orange) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                "qty": 1,
+                "listPrice": null,
+                "img": "",
+                "depth": 3,
+                "children": []
+              },
+              {
+                "partNumber": "",
+                "description": "Reshaping punch (violet) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                "qty": 1,
+                "listPrice": null,
+                "img": "",
+                "depth": 3,
+                "children": []
+              },
+              {
+                "partNumber": "",
+                "description": "Shaping mandrel \u00d86mm (green) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                "qty": 1,
+                "listPrice": null,
+                "img": "",
+                "depth": 3,
+                "children": []
+              },
+              {
+                "partNumber": "",
+                "description": "Shaping mandrel \u00d88mm (yellow) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                "qty": 1,
+                "listPrice": null,
+                "img": "",
+                "depth": 3,
+                "children": []
+              },
+              {
+                "partNumber": "",
+                "description": "Receiving socket (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                "qty": 1,
+                "listPrice": null,
+                "img": "",
+                "depth": 3,
+                "children": []
+              },
+              {
+                "partNumber": "CAR48193",
+                "description": "Extraction die \u00d85,5",
+                "qty": 1,
+                "listPrice": 181,
+                "img": "3040/48193.png",
+                "depth": 3,
+                "children": []
+              },
+              {
+                "partNumber": "",
+                "description": "Extraction mandrel (red) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                "qty": 1,
+                "listPrice": null,
+                "img": "",
+                "depth": 3,
+                "children": []
+              }
+            ]
+          },
+          {
+            "partNumber": "CAR48097",
+            "description": "Tool Case Rivet tool",
+            "qty": 1,
+            "listPrice": 1645,
+            "img": "3040/48097.jpg",
+            "depth": 2,
+            "children": []
+          }
+        ],
+        "expanded": false
+      },
+      {
+        "partNumber": "CAR48109",
+        "description": "PNP90 XT\u00b2 Full Function Rack (10T + Blind Rivet Gun) +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48109",
+        "lineItemType": 1,
+        "children": [
+          {
+            "partNumber": "CAR48107",
+            "description": "PNP90 XT\u00b2 Tool set incl. case",
+            "qty": 1,
+            "listPrice": 10283,
+            "img": "3080/48107.jpg",
+            "depth": 2,
+            "children": [
+              {
+                "partNumber": "",
+                "description": "PNP 90 SNW XT2 pressure booster (pump) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                "qty": 1,
+                "listPrice": null,
+                "img": "",
+                "depth": 3,
+                "children": []
+              },
+              {
+                "partNumber": "",
+                "description": "Hydraulic actuator HA XT2 (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                "qty": 1,
+                "listPrice": null,
+                "img": "",
+                "depth": 3,
+                "children": []
+              },
+              {
+                "partNumber": "",
+                "description": "Duo hose package DN4 (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                "qty": 1,
+                "listPrice": null,
+                "img": "",
+                "depth": 3,
+                "children": []
+              },
+              {
+                "partNumber": "",
+                "description": "Handle MB (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                "qty": 1,
+                "listPrice": null,
+                "img": "",
+                "depth": 3,
+                "children": []
+              },
+              {
+                "partNumber": "",
+                "description": "Adapter Kit 60 kN (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                "qty": 1,
+                "listPrice": null,
+                "img": "",
+                "depth": 3,
+                "children": []
+              },
+              {
+                "partNumber": "",
+                "description": "Rivet clamp NB45 (aperture 80\u00d745mm) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                "qty": 1,
+                "listPrice": null,
+                "img": "",
+                "depth": 3,
+                "children": []
+              },
+              {
+                "partNumber": "",
+                "description": "Riveting Tool Kit 1 XT2 \u2013 Punching (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                "qty": 1,
+                "listPrice": null,
+                "img": "",
+                "depth": 3,
+                "children": [
+                  {
+                    "partNumber": "",
+                    "description": "Stamping die \u00d86mm (green) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                    "qty": 1,
+                    "listPrice": null,
+                    "img": "",
+                    "depth": 4,
+                    "children": []
+                  },
+                  {
+                    "partNumber": "",
+                    "description": "Stamping die \u00d88mm (yellow) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                    "qty": 1,
+                    "listPrice": null,
+                    "img": "",
+                    "depth": 4,
+                    "children": []
+                  },
+                  {
+                    "partNumber": "",
+                    "description": "Stamping punch \u00d86mm (green) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                    "qty": 1,
+                    "listPrice": null,
+                    "img": "",
+                    "depth": 4,
+                    "children": []
+                  },
+                  {
+                    "partNumber": "",
+                    "description": "Stamping punch \u00d88mm (yellow) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                    "qty": 1,
+                    "listPrice": null,
+                    "img": "",
+                    "depth": 4,
+                    "children": []
+                  },
+                  {
+                    "partNumber": "",
+                    "description": "Slide bushing \u00d86mm (green) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                    "qty": 1,
+                    "listPrice": null,
+                    "img": "",
+                    "depth": 4,
+                    "children": []
+                  },
+                  {
+                    "partNumber": "",
+                    "description": "Slide bushing \u00d88mm (green) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                    "qty": 1,
+                    "listPrice": null,
+                    "img": "",
+                    "depth": 4,
+                    "children": []
+                  },
+                  {
+                    "partNumber": "",
+                    "description": "Punch retainer (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                    "qty": 1,
+                    "listPrice": null,
+                    "img": "",
+                    "depth": 4,
+                    "children": []
+                  },
+                  {
+                    "partNumber": "CAR48187",
+                    "description": "Key set SW13 / SW16",
+                    "qty": 1,
+                    "listPrice": 94,
+                    "img": "3040/48187.jpg",
+                    "depth": 4,
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "partNumber": "",
+                "description": "Riveting Tool Kit 2 XT2 \u2013 Flow form rivets (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                "qty": 1,
+                "listPrice": null,
+                "img": "",
+                "depth": 3,
+                "children": [
+                  {
+                    "partNumber": "",
+                    "description": "Flow form punch \u00d86mm (blue) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                    "qty": 1,
+                    "listPrice": null,
+                    "img": "",
+                    "depth": 4,
+                    "children": []
+                  },
+                  {
+                    "partNumber": "",
+                    "description": "Flow form die \u00d86mm (blue) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                    "qty": 1,
+                    "listPrice": null,
+                    "img": "",
+                    "depth": 4,
+                    "children": []
+                  },
+                  {
+                    "partNumber": "",
+                    "description": "Flow form punch \u00d88mm (orange) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                    "qty": 1,
+                    "listPrice": null,
+                    "img": "",
+                    "depth": 4,
+                    "children": []
+                  },
+                  {
+                    "partNumber": "",
+                    "description": "Flow form die \u00d88mm (orange) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                    "qty": 1,
+                    "listPrice": null,
+                    "img": "",
+                    "depth": 4,
+                    "children": []
+                  },
+                  {
+                    "partNumber": "",
+                    "description": "Reshaping punch (violet) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                    "qty": 1,
+                    "listPrice": null,
+                    "img": "",
+                    "depth": 4,
+                    "children": []
+                  },
+                  {
+                    "partNumber": "",
+                    "description": "Shaping mandrel \u00d86mm (green) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                    "qty": 1,
+                    "listPrice": null,
+                    "img": "",
+                    "depth": 4,
+                    "children": []
+                  },
+                  {
+                    "partNumber": "",
+                    "description": "Shaping mandrel \u00d88mm (yellow) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                    "qty": 1,
+                    "listPrice": null,
+                    "img": "",
+                    "depth": 4,
+                    "children": []
+                  },
+                  {
+                    "partNumber": "",
+                    "description": "Receiving socket (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                    "qty": 1,
+                    "listPrice": null,
+                    "img": "",
+                    "depth": 4,
+                    "children": []
+                  },
+                  {
+                    "partNumber": "CAR48193",
+                    "description": "Extraction die \u00d85,5",
+                    "qty": 1,
+                    "listPrice": 181,
+                    "img": "3040/48193.png",
+                    "depth": 4,
+                    "children": []
+                  },
+                  {
+                    "partNumber": "",
+                    "description": "Extraction mandrel (red) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+                    "qty": 1,
+                    "listPrice": null,
+                    "img": "",
+                    "depth": 4,
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "partNumber": "CAR48097",
+                "description": "Tool Case Rivet tool",
+                "qty": 1,
+                "listPrice": 1645,
+                "img": "3040/48097.jpg",
+                "depth": 3,
+                "children": []
+              }
+            ]
+          },
+          {
+            "partNumber": "CAR48232",
+            "description": "Full Function Rack XT\u00b2",
+            "qty": 1,
+            "listPrice": null,
+            "img": "3040/48232.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48231",
+            "description": "Tool Kit, BNW25kN with tool case",
+            "qty": 1,
+            "listPrice": 11975,
+            "img": "3040/48231.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48080",
+            "description": "Rivet clamp NB130 complete",
+            "qty": 1,
+            "listPrice": 2547,
+            "img": "3050/48080.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48081",
+            "description": "Rivet clamp NB240 complete",
+            "qty": 1,
+            "listPrice": 3447,
+            "img": "3050/48081.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48240",
+            "description": "Rivet clamp kit NB130&NB240 w case",
+            "qty": 1,
+            "listPrice": 5693,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48099",
+            "description": "Tool case, NB130 & NB240",
+            "qty": 1,
+            "listPrice": 1785,
+            "img": "3040/48100 & 48099.png",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48100",
+            "description": "Tool case blind riveting tool",
+            "qty": 1,
+            "listPrice": 1785,
+            "img": "3040/48100 & 48099.png",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48138",
+            "description": "A-tong Adapter kit, FS",
+            "qty": 1,
+            "listPrice": 1259,
+            "img": "3021/48138.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48210",
+            "description": "Riveting storage cart",
+            "qty": 1,
+            "listPrice": 5270,
+            "img": "3080/48210.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Blind Riveting Tool BNW25 (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Blind Riveting Tool Kit 25 kN (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Blind Rivet Nuts Tool Kit BNW 25 kN (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Accessories \u2013 Universal Adaption (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Operating Unit (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Assembly spanners, aid & Ejector (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          }
+        ],
+        "expanded": false
+      },
+      {
+        "partNumber": "CAR48111",
+        "description": "PNP90 \u2192 PNP90 XT2 Upgrade Kit (brochure PN \u2014 not in WSS catalog) +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48111",
+        "lineItemType": 1,
+        "children": [
+          {
+            "partNumber": "",
+            "description": "Hydraulic actuator HA XT2 (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Rivet Clamp NB45 (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Hose Package Duo DN4 (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Handle MB (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Adapter Kit 60 kN (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Riveting Tool Kit 1 \u2013 Punching (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Riveting Tool Kit 2 \u2013 Flow form rivets (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          }
+        ],
+        "expanded": false
+      },
+      {
+        "partNumber": "CAR48416",
+        "description": "PNP90 6-Ton Rivet Gun Basic Kit (excl. case) +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48416",
+        "lineItemType": 1,
+        "children": [
+          {
+            "partNumber": "",
+            "description": "PNP90 pressure intensifier (6T) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Hydraulic gun HP35 UN (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Rivet Clamp NB40 (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Locking pins (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 2,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          }
+        ],
+        "expanded": false
+      },
+      {
+        "partNumber": "CAR45704",
+        "description": "PNP90 6T Basic Kit incl. BMW Mandrel Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR45704",
+        "lineItemType": 1,
+        "children": [
+          {
+            "partNumber": "CAR48416",
+            "description": "PNP90 6t Rivet Basic Kit, exc. case",
+            "qty": 1,
+            "listPrice": null,
+            "img": "3080/48416.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR45709",
+            "description": "Rivet insert repair kit KPL BMW",
+            "qty": 1,
+            "listPrice": 674,
+            "img": "3050/45709.png",
+            "depth": 2,
+            "children": []
+          }
+        ],
+        "expanded": false
+      },
+      {
+        "partNumber": "CAR48150",
+        "description": "Blind Rivet Gun + Extended Tool Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48150",
+        "lineItemType": 1,
+        "children": [
+          {
+            "partNumber": "CAR48231",
+            "description": "Tool Kit, BNW25kN with tool case",
+            "qty": 1,
+            "listPrice": 11975,
+            "img": "3040/48231.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Blind Riveting Tool BNW25 w/ universal adaption (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Mandrel collector (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Operating Unit (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Assembly spanners (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          }
+        ],
+        "expanded": false
+      },
+      {
+        "partNumber": "CAR45709",
+        "description": "BMW Mandrel Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR45709",
+        "lineItemType": 1,
+        "children": [
+          {
+            "partNumber": "CAR48187",
+            "description": "Key set SW13 / SW16",
+            "qty": 1,
+            "listPrice": 94,
+            "img": "3040/48187.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48159",
+            "description": "Rivet bolt \u00d88,8",
+            "qty": 1,
+            "listPrice": 114,
+            "img": "3040/48159.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48189",
+            "description": "Rivet bolt \u00d85-20/8",
+            "qty": 1,
+            "listPrice": 243,
+            "img": "3040/48189.png",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48200",
+            "description": "Rivet bolt \u00d85-20",
+            "qty": 1,
+            "listPrice": 228,
+            "img": "3040/48200.png",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48162",
+            "description": "Rivet insert P1",
+            "qty": 1,
+            "listPrice": 166,
+            "img": "3040/48162.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48163",
+            "description": "Rivet insert P2",
+            "qty": 1,
+            "listPrice": 157,
+            "img": "3040/48163.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48164",
+            "description": "Rivet insert P3",
+            "qty": 1,
+            "listPrice": 157,
+            "img": "3040/48164.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48165",
+            "description": "Rivet insert P4",
+            "qty": 1,
+            "listPrice": 88,
+            "img": "3040/48165.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48166",
+            "description": "Rivet insert P5",
+            "qty": 1,
+            "listPrice": 88,
+            "img": "3040/48166.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48167",
+            "description": "Rivet insert P6",
+            "qty": 1,
+            "listPrice": 88,
+            "img": "3040/48167.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48168",
+            "description": "Rivet insert P7",
+            "qty": 1,
+            "listPrice": 88,
+            "img": "3040/48168.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48169",
+            "description": "Rivet insert P8",
+            "qty": 1,
+            "listPrice": 88,
+            "img": "3040/48169.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48170",
+            "description": "Rivet insert R1",
+            "qty": 1,
+            "listPrice": 147,
+            "img": "3040/48170.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48171",
+            "description": "Rivet insert R2",
+            "qty": 1,
+            "listPrice": 88,
+            "img": "3040/48171.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48172",
+            "description": "Rivet insert R3",
+            "qty": 1,
+            "listPrice": 147,
+            "img": "3040/48172.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48173",
+            "description": "Rivet insert R4",
+            "qty": 1,
+            "listPrice": 88,
+            "img": "3040/48173.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48174",
+            "description": "Rivet insert R5",
+            "qty": 1,
+            "listPrice": 86,
+            "img": "3040/48174.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48175",
+            "description": "Rivet insert R6",
+            "qty": 1,
+            "listPrice": 85,
+            "img": "3040/48175.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48176",
+            "description": "Rivet insert R7",
+            "qty": 1,
+            "listPrice": 88,
+            "img": "3040/48176.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48177",
+            "description": "Rivet insert R8",
+            "qty": 1,
+            "listPrice": 88,
+            "img": "3040/48177.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48178",
+            "description": "Rivet insert R9",
+            "qty": 1,
+            "listPrice": 147,
+            "img": "3040/48178.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48179",
+            "description": "Rivet insert R10",
+            "qty": 1,
+            "listPrice": 142,
+            "img": "3040/48179.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48180",
+            "description": "Rivet insert R11",
+            "qty": 1,
+            "listPrice": 150,
+            "img": "3040/48180.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48181",
+            "description": "Rivet insert R12",
+            "qty": 1,
+            "listPrice": 88,
+            "img": "3040/48181.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48182",
+            "description": "Rivet insert R13",
+            "qty": 1,
+            "listPrice": 86,
+            "img": "3040/48182.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48183",
+            "description": "Rivet insert R14",
+            "qty": 1,
+            "listPrice": 88,
+            "img": "3040/48183.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48184",
+            "description": "Rivet insert R15",
+            "qty": 1,
+            "listPrice": 89,
+            "img": "3040/48184.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48185",
+            "description": "Rivet insert R16",
+            "qty": 1,
+            "listPrice": 88,
+            "img": "3040/48185.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48186",
+            "description": "Rivet insert R17",
+            "qty": 1,
+            "listPrice": 165,
+            "img": "3040/48186.jpg",
+            "depth": 2,
+            "children": []
+          }
+        ],
+        "expanded": false
+      },
+      {
+        "partNumber": "CAR48188",
+        "description": "Ford Mandrel Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48188",
+        "lineItemType": 1,
+        "children": [
+          {
+            "partNumber": "CAR48187",
+            "description": "Key set SW13 / SW16",
+            "qty": 1,
+            "listPrice": 94,
+            "img": "3040/48187.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48190",
+            "description": "Cavity  TDG10-220",
+            "qty": 1,
+            "listPrice": 132,
+            "img": "3040/48190.png",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48191",
+            "description": "Cavity  TDP09-200",
+            "qty": 1,
+            "listPrice": 195,
+            "img": "3040/48191.png",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48192",
+            "description": "Cavity TDP11-200",
+            "qty": 1,
+            "listPrice": 128,
+            "img": "3040/48192.png",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48193",
+            "description": "Extraction die \u00d85,5",
+            "qty": 1,
+            "listPrice": 181,
+            "img": "3040/48193.png",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48194",
+            "description": "Extraction mandrel \u00d84,6",
+            "qty": 1,
+            "listPrice": 245,
+            "img": "3026/48194.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48195",
+            "description": "Cavity  TDG11-220",
+            "qty": 1,
+            "listPrice": 135,
+            "img": "3040/48195.png",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48196",
+            "description": "Cavity  TDP10-200",
+            "qty": 1,
+            "listPrice": 138,
+            "img": "3040/48196.png",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48197",
+            "description": "Cavity TDZ09-025",
+            "qty": 1,
+            "listPrice": 132,
+            "img": "3040/48197.png",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48198",
+            "description": "Punching mandrel \u00d83,7",
+            "qty": 1,
+            "listPrice": 181,
+            "img": "3040/48198.png",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48199",
+            "description": "Holder-up 41mm",
+            "qty": 1,
+            "listPrice": 200,
+            "img": "3040/48199.png",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48152",
+            "description": "Extraction die \u00d85,5",
+            "qty": 1,
+            "listPrice": 100,
+            "img": "3040/48152.png",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48153",
+            "description": "Closing head conical",
+            "qty": 1,
+            "listPrice": 81,
+            "img": "3040/48153.png",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48154",
+            "description": "Extraction die \u00d88,2 long",
+            "qty": 1,
+            "listPrice": 114,
+            "img": "3040/48154.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48155",
+            "description": "Closing head flat",
+            "qty": 1,
+            "listPrice": 78,
+            "img": "3040/48155.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48156",
+            "description": "Extraction mandrel \u00d83,7",
+            "qty": 1,
+            "listPrice": 65,
+            "img": "3040/48156.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48157",
+            "description": "Extraction mandrel \u00d84,6",
+            "qty": 1,
+            "listPrice": 78,
+            "img": "3040/48157.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48158",
+            "description": "Extraction mandrel \u00d85",
+            "qty": 1,
+            "listPrice": 89,
+            "img": "3040/48158.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48160",
+            "description": "Extraction die \u00d88,2",
+            "qty": 1,
+            "listPrice": 100,
+            "img": "3040/48160.jpg",
+            "depth": 2,
+            "children": []
+          }
+        ],
+        "expanded": false
+      },
+      {
+        "partNumber": "CAR48161",
+        "description": "VW/Audi Mandrel Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48161",
+        "lineItemType": 1,
+        "children": [
+          {
+            "partNumber": "CAR48187",
+            "description": "Key set SW13 / SW16",
+            "qty": 1,
+            "listPrice": 94,
+            "img": "3040/48187.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48193",
+            "description": "Extraction die \u00d85,5",
+            "qty": 1,
+            "listPrice": 181,
+            "img": "3040/48193.png",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48194",
+            "description": "Extraction mandrel \u00d84,6",
+            "qty": 1,
+            "listPrice": 245,
+            "img": "3026/48194.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48198",
+            "description": "Punching mandrel \u00d83,7",
+            "qty": 1,
+            "listPrice": 181,
+            "img": "3040/48198.png",
+            "depth": 2,
+            "children": []
+          }
+        ],
+        "expanded": false
+      },
+      {
+        "partNumber": "CAR48151",
+        "description": "JLR (Jaguar/Landrover) Mandrel Kit +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48151",
+        "lineItemType": 1,
+        "children": [
+          {
+            "partNumber": "CAR48187",
+            "description": "Key set SW13 / SW16",
+            "qty": 1,
+            "listPrice": 94,
+            "img": "3040/48187.jpg",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48193",
+            "description": "Extraction die \u00d85,5",
+            "qty": 1,
+            "listPrice": 181,
+            "img": "3040/48193.png",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "CAR48194",
+            "description": "Extraction mandrel \u00d84,6",
+            "qty": 1,
+            "listPrice": 245,
+            "img": "3026/48194.jpg",
+            "depth": 2,
+            "children": []
+          }
+        ],
+        "expanded": false
+      },
+      {
+        "partNumber": "CAR49411",
+        "description": "JLR XT2 Self-Pierce Riveting Tool Set (brochure PN \u2014 not in WSS catalog) +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR49411",
+        "lineItemType": 1,
+        "children": [
+          {
+            "partNumber": "",
+            "description": "Closing Head Flat \u00d810 mm (CAR49546) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Conical Closing Head (CAR49550) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Adapter, short M6/M8 (CAR49232) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Riveting Tool Set 49411 JLR (CAR49272) (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          }
+        ],
+        "expanded": false
+      },
+      {
+        "partNumber": "CAR48080",
+        "description": "NB130 Rivet Clamp (10T) \u2014 Accessory +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48080",
+        "lineItemType": 1,
+        "children": [
+          {
+            "partNumber": "",
+            "description": "Spacing bolt (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Handle (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          }
+        ],
+        "expanded": false
+      },
+      {
+        "partNumber": "CAR48081",
+        "description": "NB240 Rivet Clamp (10T) \u2014 Accessory +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48081",
+        "lineItemType": 1,
+        "children": [
+          {
+            "partNumber": "",
+            "description": "Spacing bolt (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "partNumber": "",
+            "description": "Handle (no Car-O-Liner PN \u2014 sourced from PNP90 & PNP90 XT2 brochure)",
+            "qty": 1,
+            "listPrice": null,
+            "img": "",
+            "depth": 2,
+            "children": []
+          }
+        ],
+        "expanded": false
+      },
+      {
+        "partNumber": "CAR48097",
+        "description": "Case for PNP90 / PNP90 XT2 Pump +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48097",
+        "lineItemType": 1,
+        "children": [],
+        "expanded": false
+      },
+      {
+        "partNumber": "CAR48099",
+        "description": "Case for NB130 & NB240 Clamps +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48099",
+        "lineItemType": 1,
+        "children": [],
+        "expanded": false
+      },
+      {
+        "partNumber": "CAR48100",
+        "description": "Case for Blind Rivet Tool +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48100",
+        "lineItemType": 1,
+        "children": [],
+        "expanded": false
+      },
+      {
+        "partNumber": "CAR48210",
+        "description": "PNP90 XT\u00b2 Complete Storage Cart +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48210",
+        "lineItemType": 1,
+        "children": [],
+        "expanded": false
+      },
+      {
+        "partNumber": "CAR48138",
+        "description": "A-Tong Adapter Kit FS (Universal Adaption) +*",
+        "vendor": "",
+        "vendorPartNumber": "CAR48138",
+        "lineItemType": 1,
+        "children": [],
+        "expanded": false
+      }
+    ]
   }
 }
